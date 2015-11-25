@@ -1,5 +1,9 @@
 
-# Distributed workflow engine
+# Distribot
+
+A distributed workflow engine for rabbitmq.
+
+[!robot](https://cdn2.iconfinder.com/data/icons/windows-8-metro-style/512/robot.png)
 
 ## Installation
 
@@ -26,7 +30,7 @@ end
 
 **Workflow:**
   * inserts a message into the 'is_initial' phase's queue.
-  * waits for a message on the PhaseFinished queue.
+  * waits for a message on the [PhaseName]Finished queue.
     * when a message is received, transitions the workflow to the next phase.
       * stores the new phase in its db record as 'current phase'
       * adds a transition record to the workflow's transitions table
@@ -41,7 +45,7 @@ end
 
 **[PhaseName]JobFinished Handler:**
   * checks to see if all of its handlers' queues are empty.
-    * if they are, then it inserts a message into the PhaseFinished queue.
+    * if they are, then it inserts a message into the [PhaseName]Finished queue.
       : {status: success, phase: my-phase-name, started_at: X'oclock, finished_at: Y'oclock}
 
 **Handlers:**
@@ -87,3 +91,9 @@ end
   }
 }
 ```
+
+
+
+
+
+
