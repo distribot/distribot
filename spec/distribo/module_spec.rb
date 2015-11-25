@@ -29,4 +29,16 @@ describe Distribot do
       expect(Distribot.bunny).to be_a Bunny::Session
     end
   end
+
+  describe '.redis' do
+    before do
+      Distribot.configure do |config|
+        config.redis_url = nil
+      end
+    end
+    it 'returns a new Redis instance' do
+      expect(Distribot.redis).to be_a Bunny::Session
+    end
+
+  end
 end

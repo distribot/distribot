@@ -18,9 +18,14 @@ module Distribot
     @@bunny ||= Bunny.new( configuration.rabbitmq_url )
   end
 
+  def self.redis
+    @@redis ||= Redis.new( configuration.redis_url )
+  end
+
   def self.debug=(value)
     @@debug = value ? true : false
   end
+
   def self.debug
     @@debug ||= false
   end
