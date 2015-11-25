@@ -17,8 +17,8 @@ Host github.com
     StrictHostKeyChecking no
 EOF
 
-RABBITMQ_USERNAME=distribo
-RABBITMQ_PASSWORD=distribo
+RABBITMQ_USERNAME=distribot
+RABBITMQ_PASSWORD=distribot
 
 if [ -d /data/rabbitmq ]; then
   echo "directory /data/rabbitmq already exists"
@@ -78,5 +78,5 @@ else
 fi
 
 
-cd /var/www/distribo
+cd /var/www/distribot
 bundle
