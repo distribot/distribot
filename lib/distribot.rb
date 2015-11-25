@@ -10,12 +10,21 @@ require 'distribot/phase'
 module Distribot
 
   @@config = OpenStruct.new()
+  @@did_configure = false
 
   def self.configure(&block)
-    block.call(@@config)
+    @@did_configure = true
+    block.call(configuration)
+    # Now set defaults for things that aren't defined:
+    configuration.redis_prefix ||= 'distribot'
+    configuration.queue_prefix ||= 'distribot'
   end
 
   def self.configuration
+    unless @@did_configure
+      self.configure do
+      end
+    end
     @@config
   end
 
@@ -34,5 +43,9 @@ module Distribot
 
   def self.debug
     @@debug ||= false
+  end
+
+  def self.redis_id(type, id)
+    "#{configuration.redis_prefix}-#{type}:#{id}"
   end
 end

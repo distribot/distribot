@@ -55,40 +55,45 @@ end
 
 ```json
 {
-  "workflow": "search",
-  "phases": {
-    "pending": {
+  "name": "search",
+  "phases": [
+    {
+      "name": "pending",
       "is_initial": true,
       "transitions_to": "searching",
       "on_error_transition_to": "error"
     },
-    "searching": {
+    {
+      "name": "searching",
       "transitions_to": "fetching-pages",
       "on_error_transition_to": "error",
       "handlers": [
         "GoogleSearcher"
       ]
     },
-    "fetching-pages": {
+    {
+      "name": "fetching-pages",
       "transitions_to": "finished",
       "on_error_transition_to": "error",
       "handlers": [
         "PageDownloader"
       ]
     },
-    "error": {
+    {
+      "name": "error",
       "is_final": true,
       "handlers": [
         "ErrorEmailer"
       ]
     },
-    "finished": {
+    {
+      "name": "finished",
       "is_final": true,
       "handlers": [
         "JobFinisher"
       ]
     }
-  }
+  ]
 }
 ```
 

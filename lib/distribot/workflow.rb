@@ -1,20 +1,75 @@
 
 module Distribot
   class Workflow
-    attr_accessor :name, :phases
+    attr_accessor :id, :name, :phases
 
     def initialize(attrs={})
+      self.id = attrs[:id]
       self.name = attrs[:name]
       self.phases = [ ]
       if attrs.has_key? :phases
-        attrs[:phases].each do |name, options|
-          self.add_phase(name, options)
+        attrs[:phases].each do |options|
+          self.add_phase(options)
         end
       end
     end
 
-    def add_phase(name, options={})
-      self.phases << Phase.new(name, options)
+    def save!
+      record_id = self.redis_id + ':definition'
+      is_new = redis.keys(record_id).count <= 0
+      redis.set record_id, serialize
+      if is_new
+        self.transition_to! self.phases.find{|x| x.is_initial}.name
+      end
+    end
+
+    def self.find_by_name_and_id(name, id)
+      redis_id = Distribot.redis_id("workflow.#{name}", id)
+      self.new(
+        JSON.parse( Distribot.redis.get( "#{redis_id}:definition" ), symbolize_names: true )
+      )
+    end
+
+    def add_phase(options={})
+      self.phases << Phase.new(options)
+    end
+
+    def redis_id
+      @redis_id ||= Distribot.redis_id("workflow.#{self.name}", self.id)
+    end
+
+    def transition_to!(phase)
+      previous_transition = self.transitions.last
+      prev = previous_transition ? previous_transition[:name] : nil
+      self.add_transition( from: prev, to: phase, timestamp: Time.now.utc.to_i )
+    end
+
+    def add_transition(item)
+      redis.sadd(self.redis_id + ':transitions', item.to_json)
+    end
+
+    def transitions
+      redis.smembers(self.redis_id + ':transitions').map do |item|
+        JSON.parse(item, symbolize_names: true)
+      end
+    end
+
+    private
+
+    def redis
+      Distribot.redis
+    end
+
+    def serialize
+      to_hash.to_json
+    end
+
+    def to_hash
+      {
+        id: self.id,
+        name: self.name,
+        phases: self.phases.map(&:to_hash)
+      }
     end
   end
 end
