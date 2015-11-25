@@ -37,7 +37,7 @@ describe Distribot do
       end
     end
     it 'returns a new Redis instance' do
-      expect(Distribot.redis).to be_a Bunny::Session
+      expect(Distribot.redis).to be_a Redis
     end
 
   end

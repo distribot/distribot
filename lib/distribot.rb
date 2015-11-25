@@ -2,10 +2,12 @@
 require 'active_support/core_ext/object'
 require 'active_support/json'
 require 'bunny'
+require 'redis'
 
 module Distribot
 
   @@config = OpenStruct.new()
+
   def self.configure(&block)
     block.call(@@config)
   end
@@ -19,7 +21,8 @@ module Distribot
   end
 
   def self.redis
-    @@redis ||= Redis.new( configuration.redis_url )
+    # Redis complains if we pass it a nill url. Better to not pass a url at all:
+    @@redis ||= configuration.redis_url ? Redis.new( configuration.redis_url ) : Redis.new
   end
 
   def self.debug=(value)
