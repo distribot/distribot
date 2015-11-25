@@ -4,6 +4,9 @@ require 'active_support/json'
 require 'bunny'
 require 'redis'
 
+require 'distribot/workflow'
+require 'distribot/phase'
+
 module Distribot
 
   @@config = OpenStruct.new()
