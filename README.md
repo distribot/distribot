@@ -6,7 +6,7 @@
 ### In your Gemfile
 
 ```ruby
-gem 'distribo', git: 'git@github.com:jdrago999/distribo.git'
+gem 'distribot', git: 'git@github.com:jdrago999/distribot.git'
 ```
 
 ## The Big Idea

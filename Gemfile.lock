@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    distribo (0.1.0)
+    distribot (0.1.0)
       activesupport
       bunny
       redis
@@ -67,7 +67,7 @@ PLATFORMS
 DEPENDENCIES
   bundler (~> 1.7)
   byebug
-  distribo!
+  distribot!
   faker
   rake (~> 10.0)
   rspec

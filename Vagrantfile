@@ -29,5 +29,5 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     '~/.vagrant.d/insecure_private_key',
     '~/.ssh/id_rsa'
   ]
-  config.vm.provision :shell, privileged: false, inline: '/var/www/distribo/provision_vm.sh'
+  config.vm.provision :shell, privileged: false, inline: '/var/www/distribot/provision_vm.sh'
 end
