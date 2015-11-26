@@ -141,8 +141,8 @@ end
 phase.handlers.map do |handler|
   queue = queue_name_from(workflow, phase, handler)
   count = enqueuer.enqueue(queue, handler)
-  { job_count: count, handler: handler, queue: queue }
-end.announce_to(distribot.workflow.phase.enqueued)
+  announce_to(distribot.workflow.phase.enqueued, { job_count: count, handler: handler, queue: queue }.to_json)
+end
 ```
   * `PhaseEnqueuedHandler`(reads: `distribot.workflow.phase.enqueued`)
     * starts a collection of TaskFinishedHandler instances for each of the queues.

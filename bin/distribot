@@ -9,6 +9,14 @@ class GoogleSearcher
     puts "Doing job '#{job}'..."
     callback.call()
   end
+
+  def self.enqueue(workflow, &callback)
+    # get whatever we need from workflow.meta
+    jobs = [0..100_000]
+    jobs.in_chunks_of(1000, false).each do |chunk|
+      callback.call(chunk)
+    end
+  end
 end
 
 conn = Distribot.bunny
