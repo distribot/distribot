@@ -98,6 +98,37 @@ end
 ```
 
 
+## Queues:
+
+  * distribot.workflow.created (global)
+    * transition to next phase
+
+  * distribot.workflow.phase.started
+    * enqueue jobs for handlers in their respective queues
+      * we set a counter value in redis to indicate the number of total tasks for each handler.
+    * announce in distribot.workflow.tasks.enqueued that we should be waiting for them to finish by listening to queues X and Y
+
+  * distribot.workflow.tasks.enqueued
+    * messages contain:
+      * the names of the queues ($QUEUE_X, $QUEUE_Y) that the tasks were inserted into
+      * how many tasks should be completed
+      * starts listening to distribot.workflow.task.finished
+
+  * distribot.workflow.$WORKFLOW_ID.phase.$PHASE_NAME.$HANDLER_NAME.tasks
+    * contains JSON messages which describe individual tasks for a given handler.
+    * workers subscribe, perform the task, and mark each task as complete by sending a message to distribot.workflow.task.finished
+
+  * distribot.workflow.task.finished
+    * told that another task has finished for a phase? a handler?
+    * decrements the counter value in redis
+    * when the counter value reaches zero then announce in distribot.workflow.phase.finished
+
+  * distribot.workflow.phase.finished
+    * if we can move forward, then transition to next phase
+    * if we cannot, then msg distribot.workflow.finished
+
+  * distribot.workflow.finished (global)
+    * ping the calling system to let it know that the workflow has finished.
 
 
 
