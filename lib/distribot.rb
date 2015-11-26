@@ -4,20 +4,39 @@ require 'active_support/json'
 require 'bunny'
 require 'redis'
 
+require 'distribot/workflow'
+require 'distribot/phase'
+
 module Distribot
 
   @@config = OpenStruct.new()
+  @@did_configure = false
 
   def self.configure(&block)
-    block.call(@@config)
+    @@did_configure = true
+    block.call(configuration)
+    # Now set defaults for things that aren't defined:
+    configuration.redis_prefix ||= 'distribot'
+    configuration.queue_prefix ||= 'distribot'
   end
 
   def self.configuration
+    unless @@did_configure
+      self.configure do
+      end
+    end
     @@config
   end
 
   def self.bunny
     @@bunny ||= Bunny.new( configuration.rabbitmq_url )
+  end
+
+  def self.bunny_channel
+    unless defined? @@channel
+      bunny.start
+    end
+    @@channel ||= bunny.create_channel
   end
 
   def self.redis
@@ -31,5 +50,17 @@ module Distribot
 
   def self.debug
     @@debug ||= false
+  end
+
+  def self.redis_id(type, id)
+    "#{configuration.redis_prefix}-#{type}:#{id}"
+  end
+
+  def self.queue(name)
+    bunny_channel.queue(name, auto_delete: true, durable: true)
+  end
+
+  def self.publish!(queue, json)
+    bunny_channel.default_exchange.publish json, routing_key: queue(queue).name
   end
 end
