@@ -3,21 +3,181 @@
 require 'bundler/setup'
 require 'distribot'
 require 'byebug'
+require 'pp'
+require 'active_support/core_ext/object'
+require 'active_support/core_ext/array'
+require 'active_support/json'
+
 
 class GoogleSearcher
   def self.perform(job, &callback)
-    puts "Doing job '#{job}'..."
+    puts "#{self}: Doing job '#{job}'..."
     callback.call()
   end
 
-  def self.enqueue(workflow, &callback)
+  def self.enumerate_jobs(workflow, &callback)
     # get whatever we need from workflow.meta
-    jobs = [0..100_000]
-    jobs.in_chunks_of(1000, false).each do |chunk|
-      callback.call(chunk)
+    jobs = (0..10_000).to_a
+    jobs.in_groups_of(5000, false).each do |chunk|
+      callback.call(chunk.map{|num| {a_number: num} })
     end
   end
 end
+
+
+class BingSearcher
+  def self.perform(job, &callback)
+    puts "#{self}: Doing job '#{job}'..."
+    callback.call()
+  end
+
+  def self.enumerate_jobs(workflow, &callback)
+    # get whatever we need from workflow.meta
+    jobs = (0..10_000).to_a
+    jobs.in_groups_of(5000, false).each do |chunk|
+      callback.call(chunk.map{|num| {a_number: num} })
+    end
+  end
+end
+
+module Distribot
+
+  class WorkflowCreatedHandler
+    def initialize
+      Distribot.queue('distribot.workflow.created').subscribe(block: true) do |_, _, payload|
+pp 'payload(distribot.workflow.created)' => payload
+        info = JSON.parse(payload, symbolize_names: true)
+        workflow = Distribot::Workflow.find( info[:workflow_id] )
+        workflow.transition_to! workflow.next_phase
+      end
+    end
+  end
+
+  class PhaseStartedHandler
+    def initialize
+      Distribot.queue('distribot.workflow.phase.started').subscribe do |_, _, payload|
+pp 'payload(distribot.workflow.phase.started)' => payload
+        info = JSON.parse(payload, symbolize_names: true)
+        workflow = Distribot::Workflow.find( info[:workflow_id] )
+        phase = workflow.phase( workflow.current_phase )
+        queue_counts = phase.handlers.map do |handler|
+
+          queue_name = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
+
+          # Announce that we need some workers to listen to the task queue:
+          Distribot.publish! 'distribot.workflow.handler.start', {
+            handler: handler,
+            queue_name: queue_name
+          }.to_json
+
+          # Insert these jobs into the handler's queue:
+          job_count = 0
+          Kernel.const_get(handler).enumerate_jobs(workflow) do |jobs|
+            job_count += jobs.count
+            Distribot.redis.incrby queue_name, jobs.count
+            jobs.each{|job| Distribot.publish! queue_name, job.to_json }
+          end
+          { queue_name: queue_name, job_count: job_count }
+        end
+
+        queue_counts.each do |info|
+          Distribot.publish! 'distribot.workflow.phase.enqueued', info.merge(workflow_id: workflow.id).to_json
+        end
+      end
+    end
+  end
+
+  class TaskFinishedHandler
+    def initialize(workflow_id, queue_name)
+      workflow = Distribot::Workflow.find(workflow_id)
+      counter_key = queue_name.gsub('.finished', '')
+      begin
+        Distribot.queue(queue_name).subscribe(block: true) do |_, _, payload|
+          Distribot.redis.decr counter_key
+          if Distribot.redis.get(counter_key).to_i <= 0
+            workflow = Distribot::Workflow.find(workflow_id)
+            workflow.transition_to! workflow.next_phase
+          end
+        end
+      rescue StandardError => e
+        puts "//////////////////////// FINISH ///////////////////"
+      end
+    end
+  end
+
+  class PhaseEnqueuedHandler
+    def initialize
+      Distribot.queue('distribot.workflow.phase.enqueued').subscribe do |_, _, payload|
+        info = JSON.parse(payload, symbolize_names: true)
+pp 'read(distribot.workflow.phase.enqueued)' => payload
+        TaskFinishedHandler.new( info[:workflow_id], info[:queue_name] + '.finished' )
+puts "WAITING FOR ALL WORKERS TO FINISH..."
+
+      end
+    end
+  end
+
+  class HandlerRunner
+    def initialize
+      Distribot.queue('distribot.workflow.handler.start').subscribe do |_, _, payload|
+pp 'payload(distribot.workflow.handler.start)' => payload
+        info = JSON.parse(payload, symbolize_names: true)
+        finished_queue = info[:queue_name] + '.finished'
+        Distribot.queue(info[:queue_name]).subscribe do |_, _, payload|
+          task = JSON.parse(payload, symbolize_names: true)
+          Kernel.const_get(info[:handler]).perform task do
+            # Announce this task as finished:
+            Distribot.publish! finished_queue, {foo: :bar}.to_json
+          end
+        end
+
+      end
+    end
+  end
+end
+
+
+@workflow = Distribot::Workflow.new(
+  name: 'test',
+  phases: [
+    {
+      name: 'pending',
+      is_initial: true,
+      transitions_to: 'working'
+    },
+    {
+      name: 'working',
+      handlers: [ 'GoogleSearcher', 'BingSearcher' ],
+      transitions_to: 'finished'
+    },
+    {
+      name: 'finished',
+      is_final: true
+    }
+  ]
+)
+@workflow.save!
+
+started = Distribot::PhaseStartedHandler.new
+handler_runner = Distribot::HandlerRunner.new
+enqueued = Distribot::PhaseEnqueuedHandler.new
+
+Distribot::WorkflowCreatedHandler.new
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+__END__
 
 conn = Distribot.bunny
 conn.start
