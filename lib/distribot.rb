@@ -32,6 +32,13 @@ module Distribot
     @@bunny ||= Bunny.new( configuration.rabbitmq_url )
   end
 
+  def self.bunny_channel
+    unless defined? @@channel
+      bunny.start
+    end
+    @@channel ||= bunny.create_channel
+  end
+
   def self.redis
     # Redis complains if we pass it a nill url. Better to not pass a url at all:
     @@redis ||= configuration.redis_url ? Redis.new( configuration.redis_url ) : Redis.new
@@ -47,5 +54,13 @@ module Distribot
 
   def self.redis_id(type, id)
     "#{configuration.redis_prefix}-#{type}:#{id}"
+  end
+
+  def self.queue(name)
+    bunny_channel.queue(name, auto_delete: true, durable: true)
+  end
+
+  def self.publish!(queue, json)
+    bunny_channel.default_exchange.publish json, routing_key: queue(queue).name
   end
 end

@@ -53,9 +53,8 @@ describe Distribot::Workflow do
       @workflow.save!
     end
     it 'saves it in redis' do
-      redis = Distribot.redis
-      current_history = @workflow.transitions
       @workflow.transition_to! 'searching'
+      expect(@workflow.transitions.map{|x| x[:to]}).to include 'searching'
     end
   end
 

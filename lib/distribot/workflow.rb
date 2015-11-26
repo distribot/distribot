@@ -19,6 +19,10 @@ module Distribot
       record_id = self.redis_id + ':definition'
       is_new = redis.keys(record_id).count <= 0
       redis.set record_id, serialize
+
+      Distribot.publish! 'distribot.workflow.created', {
+        id: self.id
+      }.to_json
       if is_new
         self.transition_to! self.phases.find{|x| x.is_initial}.name
       end
@@ -42,7 +46,15 @@ module Distribot
     def transition_to!(phase)
       previous_transition = self.transitions.last
       prev = previous_transition ? previous_transition[:to] : nil
+      if prev
+        Distribot.publish! "distribot.workflow.#{self.id}.phase.finished", {
+          phase: prev
+        }.to_json
+      end
       self.add_transition( from: prev, to: phase, timestamp: Time.now.utc.to_f )
+      Distribot.publish! "distribot.workflow.#{self.id}.phase.started", {
+        phase: phase
+      }.to_json
     end
 
     def add_transition(item)
