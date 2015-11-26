@@ -59,7 +59,8 @@ describe Distribot::Workflow do
       redis = Distribot.redis
       current_history = @workflow.transitions
       @workflow.transition_to! 'searching'
-
+byebug
+puts "YAY"
     end
   end
 end

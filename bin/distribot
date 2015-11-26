@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'distribot'
+require 'byebug'
+
+class GoogleSearcher
+  def self.perform(job, &callback)
+    puts "Doing job '#{job}'..."
+    callback.call()
+  end
+end
+
+conn = Distribot.bunny
+conn.start
+ch = conn.create_channel
+x = ch.default_exchange
+
+task_finished_queue = ch.queue('search.searching.task-finished', auto_delete: true, durable: true)
+searching_phase_started_queue = ch.queue('search.searching.phase-started', auto_delete: true, durable: true)
+searching_phase_queue = ch.queue('search.searching', auto_delete: true, durable: true)
+
+google_searcher_handler_queue = ch.queue('search.handler.GoogleSearcher', auto_delete: false, durable: true)
+
+job_queues = [
+  google_searcher_handler_queue
+]
+
+@json = JSON.parse( File.read('spec/fixtures/simple_workflow.json'), symbolize_names: true )
+@id = SecureRandom.uuid
+@workflow = Distribot::Workflow.new(
+  id: @id,
+  name: @json[:name],
+  phases: @json[:phases]
+)
+
+@workflow.transition_to! 'searching'
+x.publish( {workflow: @workflow.id}.to_json, routing_key: searching_phase_queue.name )
+
+
+@expected_task_count = 0
+searching_phase_queue.subscribe do |delivery_info, metadata, payload|
+  puts "Payload: '#{payload}' => search.searching"
+  # Enqueue all the jobs to all the job queues:
+  jobs = (1..100_000).to_a.map{|x| {job_id: x}}
+  jobs.each do |job|
+    job_queues.each do |job_queue|
+      @expected_task_count += 1
+      x.publish job.to_json, routing_key: job_queue.name
+    end
+  end
+
+  # Announce that we have finished enqueueing all the jobs (and we can start waiting for them to be finished):
+  puts "ALL JOBS ENQUEUED"
+  x.publish 'begin-monitoring', routing_key: searching_phase_started_queue.name
+end
+
+
+
+# Be ready for when search.searching jobs finish:
+searching_phase_started_queue.subscribe do |delivery_info, metadata, payload|
+  puts "STARTING TO MONITOR task-finished queue:"
+  @announced_phase_finish = false
+  @announced_tasks_finished = 0
+  task_finished_queue.subscribe do |delivery_info, metadata, payload|
+    puts "TASK FINISHED: '#{payload}'"
+    @announced_tasks_finished += 1
+    unless @announced_phase_finish
+      all_job_queues_are_empty = @announced_tasks_finished >= @expected_task_count
+      if all_job_queues_are_empty
+        puts "ALL JOBS ARE DONE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        @announced_phase_finish = true
+      end
+    end
+  end
+
+  # Listen for new tasks for the GoogleSearcher handler:
+  google_searcher_handler_queue.subscribe do |delivery_info, metadata, payload|
+    GoogleSearcher.perform payload do
+      x.publish payload, routing_key: task_finished_queue.name
+    end
+  end
+end
+
+sleep 10
+byebug
+puts "OK"
