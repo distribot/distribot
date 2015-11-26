@@ -92,7 +92,7 @@ pp 'payload(distribot.workflow.phase.started)' => payload
       workflow = Distribot::Workflow.find(workflow_id)
       counter_key = queue_name.gsub('.finished', '')
       begin
-        Distribot.queue(queue_name).subscribe do |_, _, payload|
+        Distribot.queue(queue_name).subscribe(block: true) do |_, _, payload|
           Distribot.redis.decr counter_key
           if Distribot.redis.get(counter_key).to_i <= 0
             workflow = Distribot::Workflow.find(workflow_id)
@@ -123,7 +123,7 @@ puts "WAITING FOR ALL WORKERS TO FINISH..."
 pp 'payload(distribot.workflow.handler.start)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         finished_queue = info[:queue_name] + '.finished'
-        consumer = Distribot.queue(info[:queue_name]).subscribe do |_, _, payload|
+        Distribot.queue(info[:queue_name]).subscribe do |_, _, payload|
           task = JSON.parse(payload, symbolize_names: true)
           Kernel.const_get(info[:handler]).perform task do
             # Announce this task as finished:
