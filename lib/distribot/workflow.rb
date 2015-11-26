@@ -50,11 +50,6 @@ module Distribot
     def transition_to!(phase)
       previous_transition = self.transitions.last
       prev = previous_transition ? previous_transition[:to] : nil
-      if prev
-        Distribot.publish! "distribot.workflow.#{self.id}.phase.finished", {
-          phase: prev
-        }.to_json
-      end
       self.add_transition( from: prev, to: phase, timestamp: Time.now.utc.to_f )
       Distribot.publish! 'distribot.workflow.phase.started', {
         workflow_id: self.id,
