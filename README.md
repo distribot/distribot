@@ -135,7 +135,8 @@ end
 
   * `WorkflowCreatedHandler`(reads: `distribot.workflow.created`)
   * `PhaseStartedHandler`(reads: `distribot.workflow.phase.started`, writes: `distribot.workflow.phase.enqueued`)
-    * knows how to enqueue jobs.
+    * tells the `$HANDLER` to enumerate the jobs, then enqueues them itself.
+    * announces on `distribot.workflow.handler.start` that a `$HANDLER` must start and listen to the `$QUEUE`.
     * has a callback to announce job queue names.
 ```ruby
 phase.handlers.map do |handler|
@@ -144,8 +145,13 @@ phase.handlers.map do |handler|
   announce_to(distribot.workflow.phase.enqueued, { job_count: count, handler: handler, queue: queue }.to_json)
 end
 ```
+  * `HandlerRunner`(reads: `distribot.workflow.handler.start`)
+    * listens for a message about which `$HANDLER` to start and which `$QUEUE` it should be fed from.
+    * starts a handler
+    * feeds it messages until the task count has reached zero.
+    * kills the handler
   * `PhaseEnqueuedHandler`(reads: `distribot.workflow.phase.enqueued`)
-    * starts a collection of TaskFinishedHandler instances for each of the queues.
+    * starts a TaskFinishedHandler instance for each of the queues.
     * waits for each of them to exit their blocking loop after all their tasks have completed.
     * `TaskFinishedHandler`(reads: `distribot.workflow.$WORKFLOW_ID.$PHASE_NAME.$HANDLER_NAME.task.finished`)
       * decrements its counter in redis
