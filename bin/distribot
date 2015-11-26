@@ -16,23 +16,45 @@ conn.start
 ch = conn.create_channel
 x = ch.default_exchange
 
-task_finished_queue = ch.queue('search.searching.task-finished', auto_delete: true, durable: true)
-searching_phase_started_queue = ch.queue('search.searching.phase-started', auto_delete: true, durable: true)
-searching_phase_queue = ch.queue('search.searching', auto_delete: true, durable: true)
+workflow_created_queue = ch.queue('distribot.workflow.created', auto_delete: true, durable: true)
+workflow_created_queue.subscribe do |_, _, payload|
+  puts "!! Workflow created: #{payload}"
 
-google_searcher_handler_queue = ch.queue('search.handler.GoogleSearcher', auto_delete: false, durable: true)
+  # Transition to its first phase:
+  info = JSON.parse(payload, symbolize_names: true)
+  workflow = Distribot::Workflow.find( info[:id] )
+  workflow.transition_to! workflow.phases.reject{|x| x[:is_initial] }.first[:name]
 
+end
+
+workflow_finished_queue = ch.queue('distribot.workflow.finished', auto_delete: true, durable: true)
+workflow_finished_queue.subscribe do |_, _, payload|
+  puts ">> Workflow FINISHED: #{payload}"
+end
+
+@json = JSON.parse( File.read('spec/fixtures/simple_workflow.json'), symbolize_names: true )
+@workflow = Distribot::Workflow.new(
+  name: @json[:name],
+  phases: @json[:phases]
+)
+@workflow.save!
+x.publish {id: @workflow.id}.to_json, routing_key: workflow_created_queue.name
+
+task_finished_queue = ch.queue("distribot.workflow.#{@workflow.id}.phase.searching.task.finished", auto_delete: true, durable: true)
+phase_started_queue = ch.queue("distribot.#{@workflow.id}.phase.started", auto_delete: true, durable: true)
+phase_finished_queue = ch.queue("distribot.#{@workflow.id}.phase.finished", auto_delete: true, durable: true)
+
+
+google_searcher_handler_queue = ch.queue("distribot.workflow.#{@workflow.id}.phase.searching.handler.GoogleSearcher", auto_delete: false, durable: true)
 job_queues = [
   google_searcher_handler_queue
 ]
 
-@json = JSON.parse( File.read('spec/fixtures/simple_workflow.json'), symbolize_names: true )
-@id = SecureRandom.uuid
-@workflow = Distribot::Workflow.new(
-  id: @id,
-  name: @json[:name],
-  phases: @json[:phases]
-)
+workflow_created_queue.subscribe do |_, _, payload|
+  info = JSON.parse(payload, symbolize_names: true)
+  workflow = Distribot::Workflow.find_by_id(info[:id])
+  phase_started_queue.subscribe
+end
 
 @workflow.transition_to! 'searching'
 x.publish( {workflow: @workflow.id}.to_json, routing_key: searching_phase_queue.name )

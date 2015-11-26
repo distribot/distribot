@@ -15,6 +15,7 @@ module Distribot
     end
 
     def save!
+      self.id ||= SecureRandom.uuid
       record_id = self.redis_id + ':definition'
       is_new = redis.keys(record_id).count <= 0
       redis.set record_id, serialize
@@ -23,8 +24,8 @@ module Distribot
       end
     end
 
-    def self.find_by_name_and_id(name, id)
-      redis_id = Distribot.redis_id("workflow.#{name}", id)
+    def self.find(id)
+      redis_id = Distribot.redis_id("workflow", id)
       self.new(
         JSON.parse( Distribot.redis.get( "#{redis_id}:definition" ), symbolize_names: true )
       )
@@ -35,13 +36,13 @@ module Distribot
     end
 
     def redis_id
-      @redis_id ||= Distribot.redis_id("workflow.#{self.name}", self.id)
+      @redis_id ||= Distribot.redis_id("workflow", self.id)
     end
 
     def transition_to!(phase)
       previous_transition = self.transitions.last
-      prev = previous_transition ? previous_transition[:name] : nil
-      self.add_transition( from: prev, to: phase, timestamp: Time.now.utc.to_i )
+      prev = previous_transition ? previous_transition[:to] : nil
+      self.add_transition( from: prev, to: phase, timestamp: Time.now.utc.to_f )
     end
 
     def add_transition(item)
@@ -50,8 +51,17 @@ module Distribot
 
     def transitions
       redis.smembers(self.redis_id + ':transitions').map do |item|
-        JSON.parse(item, symbolize_names: true)
+        OpenStruct.new JSON.parse(item, symbolize_names: true)
       end
+    end
+
+    def current_phase
+      self.transitions.sort_by(&:timestamp).last.to || self.phases.find{|x| x.is_initial }.name
+    end
+
+    def next_phase
+      current = self.current_phase
+      self.phases.find{|x| x.name == current }.transitions_to
     end
 
     private

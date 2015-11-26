@@ -6,7 +6,6 @@ describe Distribot::Workflow do
   end
   it 'can be initialized' do
     workflow = Distribot::Workflow.new(
-      id: SecureRandom.uuid,
       name: @json[:name],
       phases: @json[:phases]
     )
@@ -16,23 +15,21 @@ describe Distribot::Workflow do
 
   describe '#redis_id' do
     before do
-      @id = SecureRandom.uuid
+      expect(SecureRandom).to receive(:uuid){ 'xxxxx' }
       @workflow = Distribot::Workflow.new(
-        id: @id,
         name: @json[:name],
         phases: @json[:phases]
       )
+      @workflow.save!
     end
     it 'returns the redis id' do
-      expect(@workflow.redis_id).to eq 'distribot-workflow.search:' + @id
+      expect(@workflow.redis_id).to eq 'distribot-workflow:' + 'xxxxx'
     end
   end
 
   describe '#save!' do
     before do
-      @id = SecureRandom.uuid
       @workflow = Distribot::Workflow.new(
-        id: @id,
         name: @json[:name],
         phases: @json[:phases]
       )
@@ -59,8 +56,58 @@ describe Distribot::Workflow do
       redis = Distribot.redis
       current_history = @workflow.transitions
       @workflow.transition_to! 'searching'
-byebug
-puts "YAY"
+    end
+  end
+
+  describe '#current_phase' do
+    before do
+      @workflow = Distribot::Workflow.new(
+        name: 'foobar',
+        phases: [
+          {name: 'step1', is_initial: true},
+          {name: 'step2', is_final: true},
+        ]
+      )
+      @workflow.save!
+    end
+    context 'when the workflow is new' do
+      it 'returns the first phase marked with is_initial=true' do
+        expect(@workflow.current_phase).to eq 'step1'
+      end
+    end
+    context 'when the workflow has previous transitions' do
+      before do
+        @workflow.transition_to! 'step2'
+      end
+      it 'returns the latest phase the workflow transitioned into' do
+        expect(@workflow.current_phase).to eq 'step2'
+      end
+    end
+  end
+
+  describe '#next_phase' do
+    before do
+      @workflow = Distribot::Workflow.new(
+        name: 'foobar',
+        phases: [
+          {name: 'step1', is_initial: true, transitions_to: 'step2'},
+          {name: 'step2', is_final: true},
+        ]
+      )
+      @workflow.save!
+    end
+    context 'when there is a next phase' do
+      it 'returns the next phase name' do
+        expect(@workflow.next_phase).to eq 'step2'
+      end
+    end
+    context 'when there is no next phase' do
+      before do
+        @workflow.transition_to! 'step2'
+      end
+      it 'returns nil' do
+        expect(@workflow.next_phase).to be_nil
+      end
     end
   end
 end
