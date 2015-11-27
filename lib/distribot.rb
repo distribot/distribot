@@ -37,7 +37,7 @@ module Distribot
       bunny.start
     end
     @@channel ||= bunny.create_channel
-    @@channel.prefetch(1)
+#    @@channel.prefetch(1)
     @@channel
   end
 
@@ -62,8 +62,13 @@ module Distribot
     bunny_channel.queue(name, auto_delete: true, durable: true)
   end
 
-  def self.publish!(queue, json)
-sleep 3 unless queue =~ /\.task/
-    bunny_channel.default_exchange.publish json, routing_key: queue(queue).name
+  def self.publish!(queue_name, json)
+    begin
+      queue_obj = queue(queue_name)
+    rescue StandardError => e
+      puts "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+      raise e
+    end
+    bunny_channel.default_exchange.publish json, routing_key: queue_obj.name
   end
 end
