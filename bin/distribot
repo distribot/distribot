@@ -12,7 +12,7 @@ require 'active_support/json'
 class GoogleSearcher
   def self.perform(job, &callback)
     puts "#{self}: Doing job '#{job}'..."
-    sleep 0.1
+`curl -k --silent http://www.example.com/?#{self} > /dev/null`
     callback.call()
   end
 
@@ -33,7 +33,7 @@ class YahooSearcher < GoogleSearcher; end
 class Frobnicator
   def self.perform(job, &callback)
     puts "#{self}: performing job ##{job}.."
-    sleep 0.1
+`curl -k --silent http://www.example.com/ > /dev/null`
     callback.call()
   end
   def self.enumerate_jobs(workflow, &callback)
@@ -42,17 +42,6 @@ class Frobnicator
 end
 
 module Distribot
-
-  class WorkflowCreatedHandler
-    def initialize
-      Distribot.queue('distribot.workflow.created').subscribe do |_, _, payload|
-pp 'payload(distribot.workflow.created)' => payload
-        info = JSON.parse(payload, symbolize_names: true)
-        workflow = Distribot::Workflow.find( info[:workflow_id] )
-        workflow.transition_to! workflow.next_phase
-      end
-    end
-  end
 
   class PhaseStartedHandler
     def initialize
@@ -171,10 +160,12 @@ pp 'payload(distribot.workflow.handler.start)' => payload
         finished_queue = info[:queue_name] + '.finished'
         @@consumers << Distribot.queue(info[:queue_name]).subscribe do |_, _, payload|
           task = JSON.parse(payload, symbolize_names: true)
+Thread.new do
           Kernel.const_get(info[:handler]).perform task do
             # Announce this task as finished:
             Distribot.publish! finished_queue, {foo: :bar}.to_json
           end
+end
         end
       end
     end
@@ -277,10 +268,10 @@ phase_finished = Distribot::PhaseFinishedHandler.new
 finished = Distribot::WorkflowFinishedHandler.new
 
 Thread.new do
-  (1..5).to_a.each do |num|
+  (1..50).to_a.each do |num|
     puts "MAKING WORKFLOW \##{num}"
     make_workflow "workflow number #{num}"
-    sleep 10
+    sleep 2
   end
   puts "Finished making consumers (from now on, only Cancelling)"
 end

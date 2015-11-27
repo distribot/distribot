@@ -42,6 +42,52 @@ describe Distribot::Workflow do
     end
   end
 
+  describe '.create!' do
+    before do
+      expect_any_instance_of(Distribot::Workflow).to receive(:save!)
+    end
+    it 'saves the object and returns it' do
+      workflow = Distribot::Workflow.create!(name: 'testy', phases: [ ])
+      expect(workflow).to be_a Distribot::Workflow
+    end
+  end
+
+  describe '.find' do
+    context 'when it can be found' do
+      before do
+        @workflow = Distribot::Workflow.create!(name: 'testy', phases: [{is_initial: true, name: 'pending'} ])
+      end
+      it 'returns the correct workflow' do
+        found = Distribot::Workflow.find(@workflow.id)
+        expect(found).to be_a Distribot::Workflow
+        expect(found.id).to eq @workflow.id
+      end
+    end
+    context 'when it cannot be found' do
+      it 'returns nil' do
+        expect(Distribot::Workflow.find('tgehwbn')).to be_nil
+      end
+    end
+  end
+
+  describe '#phase(name)' do
+    before do
+      @workflow = Distribot::Workflow.create!(name: 'testy', phases: [{is_initial: true, name: 'testy'} ])
+    end
+    context 'when the phase' do
+      context 'exists' do
+        it 'returns the phase object' do
+          expect(@workflow.phase('testy')).to be_a Distribot::Phase
+        end
+      end
+      context 'does not exist' do
+        it 'returns nil' do
+          expect(@workflow.phase('missing-phase')).to be_nil
+        end
+      end
+    end
+  end
+
   describe '#transition_to!(:phase_name)' do
     before do
       @id = SecureRandom.uuid

@@ -6,6 +6,8 @@ require 'redis'
 
 require 'distribot/workflow'
 require 'distribot/phase'
+require 'distribot/handler'
+require 'distribot/workflow_created_handler'
 
 module Distribot
 
@@ -62,12 +64,12 @@ module Distribot
   end
 
   def self.publish!(queue_name, json)
-    begin
+#    begin
       queue_obj = queue(queue_name)
-    rescue StandardError => e
-      puts "ERROR: #{e} --- #{e.backtrace.join("\n")}"
-      raise e
-    end
+    # rescue StandardError => e
+    #   puts "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+    #   raise e
+    # end
     bunny_channel.default_exchange.publish json, routing_key: queue_obj.name
   end
 end

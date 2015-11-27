@@ -39,6 +39,15 @@ describe Distribot do
     it 'returns a new Redis instance' do
       expect(Distribot.redis).to be_a Redis
     end
+  end
 
+  describe '.publish!' do
+    context 'when publsihing' do
+      context 'succeeds' do
+
+      end
+      context 'fails' do
+      end
+    end
   end
 end

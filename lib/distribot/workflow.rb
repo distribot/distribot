@@ -14,6 +14,12 @@ module Distribot
       end
     end
 
+    def self.create!(attrs={})
+      obj = self.new(attrs)
+      obj.save!
+      return obj
+    end
+
     def save!
       self.id ||= SecureRandom.uuid
       record_id = self.redis_id + ':definition'
@@ -30,8 +36,9 @@ module Distribot
 
     def self.find(id)
       redis_id = Distribot.redis_id("workflow", id)
+      raw_json = Distribot.redis.get( "#{redis_id}:definition" ) or return
       self.new(
-        JSON.parse( Distribot.redis.get( "#{redis_id}:definition" ), symbolize_names: true )
+        JSON.parse( raw_json, symbolize_names: true )
       )
     end
 
