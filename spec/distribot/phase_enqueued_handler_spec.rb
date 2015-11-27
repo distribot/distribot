@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Distribot::WorkflowCreatedHandler do
+describe Distribot::PhaseEnqueuedHandler do
   before :each do
     Distribot.stub(:queue) do
       queue = double('queue')
@@ -19,8 +19,8 @@ describe Distribot::WorkflowCreatedHandler do
     end
   end
   describe 'definition' do
-    it 'subscribes to the distribot.workflow.created queue' do
-      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.created'
+    it 'subscribes to the distribot.workflow.phase.enqueued queue' do
+      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.phase.enqueued'
     end
     it 'declares a valid handler' do
       expect(Distribot::Handler.handler_for(described_class)).to eq :callback

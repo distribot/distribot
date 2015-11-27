@@ -10,9 +10,9 @@ require 'active_support/json'
 
 
 class GoogleSearcher
-  def self.perform(job, &callback)
+  def self.perform(context, job, &callback)
     puts "#{self}: Doing job '#{job}'..."
-`curl -k --silent http://www.example.com/?#{self} > /dev/null`
+`curl -k --silent http://www.example.com/robots.txt?#{self} > /dev/null`
     callback.call()
   end
 
@@ -29,16 +29,99 @@ end
 class BingSearcher < GoogleSearcher; end
 
 class YahooSearcher < GoogleSearcher; end
+class FooBarBaz_0 < GoogleSearcher; end
+class FooBarBaz_1 < GoogleSearcher; end
+class FooBarBaz_2 < GoogleSearcher; end
+class FooBarBaz_3 < GoogleSearcher; end
+class FooBarBaz_4 < GoogleSearcher; end
+class FooBarBaz_5 < GoogleSearcher; end
+class FooBarBaz_6 < GoogleSearcher; end
+class FooBarBaz_7 < GoogleSearcher; end
+class FooBarBaz_8 < GoogleSearcher; end
+class FooBarBaz_9 < GoogleSearcher; end
+class FooBarBaz_A < GoogleSearcher; end
+class FooBarBaz_B < GoogleSearcher; end
+class FooBarBaz_C < GoogleSearcher; end
+class FooBarBaz_D < GoogleSearcher; end
+class FooBarBaz_E < GoogleSearcher; end
+class FooBarBaz_F < GoogleSearcher; end
 
 class Frobnicator
-  def self.perform(job, &callback)
-    puts "#{self}: performing job ##{job}.."
-`curl -k --silent http://www.example.com/ > /dev/null`
+  def self.perform(context, job, &callback)
+    puts "#{self}: performing job #{context.workflow_id}.#{context.phase} ##{job}.."
+`curl -k --silent http://www.example.com/robots.txt > /dev/null`
     callback.call()
   end
   def self.enumerate_jobs(workflow, &callback)
     callback.call((0..10).to_a.map{|id| {id: id} })
   end
+end
+
+module Example
+
+@@total_workflows = 0
+def self.make_workflow(name)
+  @@total_workflows += 1
+  name += "##{@@total_workflows}"
+  @workflow = Distribot::Workflow.new(
+    name: name,
+    phases: [
+      {
+        name: 'pending',
+        is_initial: true,
+        transitions_to: 'phase1'
+      },
+      {
+        name: 'phase1',
+        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+        transitions_to: 'phase2'
+      },
+      {
+        name: 'phase2',
+        handlers: [
+          'Frobnicator',
+          'FooBarBaz_0',
+          'FooBarBaz_1',
+          'FooBarBaz_2',
+          'FooBarBaz_3',
+          'FooBarBaz_4',
+          'FooBarBaz_5',
+          'FooBarBaz_6',
+          'FooBarBaz_7',
+          'FooBarBaz_8',
+          'FooBarBaz_9',
+          'FooBarBaz_A',
+          'FooBarBaz_B',
+          'FooBarBaz_C',
+          'FooBarBaz_D',
+          'FooBarBaz_E',
+          'FooBarBaz_F',
+        ],
+        transitions_to: 'phase3'
+      },
+      {
+        name: 'phase3',
+        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+        transitions_to: 'phase4'
+      },
+      {
+        name: 'phase4',
+        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+        transitions_to: 'phase5'
+      },
+      {
+        name: 'phase5',
+        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+        transitions_to: 'finished'
+      },
+      {
+        name: 'finished',
+        is_final: true
+      }
+    ]
+  )
+  @workflow.save!
+end
 end
 
 module Distribot
@@ -137,17 +220,15 @@ pp 'read(distribot.workflow.handler.finished)' => payload
     end
   end
 
-  class PhaseEnqueuedHandler
-    def initialize
-      Distribot.queue('distribot.workflow.phase.enqueued').subscribe do |_, _, payload|
-        info = JSON.parse(payload, symbolize_names: true)
-pp 'read(distribot.workflow.phase.enqueued)' => payload
-        TaskFinishedHandler.new( info[:workflow_id], info[:queue_name] + '.finished', info[:handler] )
-#puts "WAITING FOR ALL WORKERS TO FINISH..."
-
-      end
-    end
-  end
+#   class PhaseEnqueuedHandler
+#     def initialize
+#       Distribot.queue('distribot.workflow.phase.enqueued').subscribe do |_, _, payload|
+#         info = JSON.parse(payload, symbolize_names: true)
+# pp 'read(distribot.workflow.phase.enqueued)' => payload
+#         TaskFinishedHandler.new( info[:workflow_id], info[:queue_name] + '.finished', info[:handler] )
+#       end
+#     end
+#   end
 
   class HandlerRunner
     @@consumers = [ ]
@@ -156,12 +237,14 @@ pp 'read(distribot.workflow.phase.enqueued)' => payload
       semaphore = Mutex.new
       Distribot.queue('distribot.workflow.handler.start').subscribe do |_, _, payload|
 pp 'payload(distribot.workflow.handler.start)' => payload
-        info = JSON.parse(payload, symbolize_names: true)
-        finished_queue = info[:queue_name] + '.finished'
-        @@consumers << Distribot.queue(info[:queue_name]).subscribe do |_, _, payload|
+        data = JSON.parse(payload, symbolize_names: true)
+        finished_queue = data[:queue_name] + '.finished'
+        workflow_id, phase = /distribot\.workflow\.(?<workflow_id>.+?)\.(?<phase>.+?)\./.match( data[:queue_name] ).captures
+        context = OpenStruct.new(data.merge(phase: phase, workflow_id: workflow_id))
+        @@consumers << Distribot.queue(data[:queue_name]).subscribe do |_, _, payload|
           task = JSON.parse(payload, symbolize_names: true)
 Thread.new do
-          Kernel.const_get(info[:handler]).perform task do
+          Kernel.const_get(data[:handler]).perform(context, task) do
             # Announce this task as finished:
             Distribot.publish! finished_queue, {foo: :bar}.to_json
           end
@@ -208,7 +291,8 @@ pp 'payload(distribot.workflow.finished)' => payload
 puts "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find(info[:workflow_id])
-puts "WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
+        Example.make_workflow("Testy")
         # TODO: mark this workflow as 'finished'
         # Maybe via Sidekiq.
       end
@@ -217,48 +301,6 @@ puts "WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 end
 
 
-def make_workflow(name)
-  @workflow = Distribot::Workflow.new(
-    name: name,
-    phases: [
-      {
-        name: 'pending',
-        is_initial: true,
-        transitions_to: 'phase1'
-      },
-      {
-        name: 'phase1',
-        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-        transitions_to: 'phase2'
-      },
-      {
-        name: 'phase2',
-        handlers: [ 'Frobnicator' ],
-        transitions_to: 'phase3'
-      },
-      {
-        name: 'phase3',
-        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-        transitions_to: 'phase4'
-      },
-      {
-        name: 'phase4',
-        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-        transitions_to: 'phase5'
-      },
-      {
-        name: 'phase5',
-        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-        transitions_to: 'finished'
-      },
-      {
-        name: 'finished',
-        is_final: true
-      }
-    ]
-  )
-  @workflow.save!
-end
 
 started = Distribot::PhaseStartedHandler.new
 handler_runner = Distribot::HandlerRunner.new
@@ -268,10 +310,9 @@ phase_finished = Distribot::PhaseFinishedHandler.new
 finished = Distribot::WorkflowFinishedHandler.new
 
 Thread.new do
-  (1..50).to_a.each do |num|
-    puts "MAKING WORKFLOW \##{num}"
-    make_workflow "workflow number #{num}"
-    sleep 2
+  (1..1).to_a.each do |num|
+    Example.make_workflow "Testy"
+#    sleep 2
   end
   puts "Finished making consumers (from now on, only Cancelling)"
 end
