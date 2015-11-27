@@ -184,7 +184,7 @@ pp 'payload(distribot.workflow.handler.start)' => payload
     end
 
     def self.cancel_consumers_for(queue_name)
-      @@consumers.select{|consumer| consumer.queue.name == queue_name}.map(&:cancel)
+      @@consumers.select{|consumer| consumer.queue.name == queue_name}.map{|consumer| puts "Cancelling consumer of #{consumer.queue.name}"; consumer}.map(&:cancel)
       @@consumers = @@consumers.delete_if{|x| x.queue.name == queue_name}
     end
   end
@@ -277,11 +277,12 @@ phase_finished = Distribot::PhaseFinishedHandler.new
 finished = Distribot::WorkflowFinishedHandler.new
 
 Thread.new do
-  (1..1_000).to_a.each do |num|
+  (1..5).to_a.each do |num|
     puts "MAKING WORKFLOW \##{num}"
     make_workflow "workflow number #{num}"
-    sleep 0.5
+    sleep 10
   end
+  puts "Finished making consumers (from now on, only Cancelling)"
 end
 
 sleep 1
