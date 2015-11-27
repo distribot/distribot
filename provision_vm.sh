@@ -4,7 +4,7 @@ set -e
 
 sudo apt-get -y update
 sudo apt-get -y autoremove
-sudo apt-get install -y ruby2.0 ruby2.0-dev build-essential git
+sudo apt-get install -y ruby2.0 ruby2.0-dev build-essential git redis-server wget vim
 sudo ln -sf /usr/bin/ruby2.0 /usr/bin/ruby && sudo ln -sf /usr/bin/gem2.0 /usr/bin/gem
 
 if ! gem list | grep bundler; then
@@ -49,7 +49,7 @@ if which rabbitmqctl; then
   sudo service rabbitmq-server start
 else
   sudo apt-get update
-  sudo apt-get install -y rabbitmq-server
+  sudo apt-get install -y --force-yes rabbitmq-server
   sudo chown -R rabbitmq:rabbitmq /data/rabbitmq
   sudo service rabbitmq-server restart
   sudo rabbitmq-plugins enable rabbitmq_management

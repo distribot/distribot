@@ -9,9 +9,9 @@ require 'active_support/core_ext/array'
 require 'active_support/json'
 
 
-class GoogleSearcher
+class BaseWorker
   def self.perform(context, job, &callback)
-    puts "#{self}: Doing job '#{job}'..."
+#    puts "#{self}: Doing job '#{job}'..."
 #{}`curl -k --silent http://www.example.com/robots.txt?#{self} > /dev/null`
     callback.call()
   end
@@ -25,48 +25,48 @@ class GoogleSearcher
   end
 end
 
-
-class BingSearcher < GoogleSearcher; end
-
-class YahooSearcher < GoogleSearcher; end
-class FooBarBaz_0 < GoogleSearcher; end
-class FooBarBaz_1 < GoogleSearcher; end
-class FooBarBaz_2 < GoogleSearcher; end
-class FooBarBaz_3 < GoogleSearcher; end
-class FooBarBaz_4 < GoogleSearcher; end
-class FooBarBaz_5 < GoogleSearcher; end
-class FooBarBaz_6 < GoogleSearcher; end
-class FooBarBaz_7 < GoogleSearcher; end
-class FooBarBaz_8 < GoogleSearcher; end
-class FooBarBaz_9 < GoogleSearcher; end
-class FooBarBaz_A < GoogleSearcher; end
-class FooBarBaz_B < GoogleSearcher; end
-class FooBarBaz_C < GoogleSearcher; end
-class FooBarBaz_D < GoogleSearcher; end
-class FooBarBaz_E < GoogleSearcher; end
-class FooBarBaz_F < GoogleSearcher; end
-
-class Frobnicator
-  def self.perform(context, job, &callback)
-    puts "#{self}: performing job #{context.workflow_id}.#{context.phase} ##{job}.."
-#{}`curl -k --silent http://www.example.com/robots.txt > /dev/null`
-    callback.call()
-  end
-  def self.enumerate_jobs(workflow, &callback)
-    callback.call((0..10).to_a.map{|id| {id: id} })
-  end
-end
+class GoogleSearcher < BaseWorker; end
+class BingSearcher < BaseWorker; end
+class YahooSearcher < BaseWorker; end
+class FooBarBaz_0 < BaseWorker; end
+class FooBarBaz_1 < BaseWorker; end
+class FooBarBaz_2 < BaseWorker; end
+class FooBarBaz_3 < BaseWorker; end
+class FooBarBaz_4 < BaseWorker; end
+class FooBarBaz_5 < BaseWorker; end
+class FooBarBaz_6 < BaseWorker; end
+class FooBarBaz_7 < BaseWorker; end
+class FooBarBaz_8 < BaseWorker; end
+class FooBarBaz_9 < BaseWorker; end
+class FooBarBaz_A < BaseWorker; end
+class FooBarBaz_B < BaseWorker; end
+class FooBarBaz_C < BaseWorker; end
+class FooBarBaz_D < BaseWorker; end
+class FooBarBaz_E < BaseWorker; end
+class FooBarBaz_F < BaseWorker; end
+class SimpleWorker < BaseWorker; end
+class Frobnicator < BaseWorker; end
 
 module Example
 
-@@total_workflows = 0
-def self.make_workflow(name)
-  return if @@total_workflows >= 10_000
-  @@total_workflows += 1
-  name += "##{@@total_workflows}"
-  @workflow = Distribot::Workflow.new(
-    name: name,
-    phases: [
+@@phase_groups = [
+    [
+      {
+        name: 'pending',
+        is_initial: true,
+        transitions_to: 'phase-a-licious'
+      },
+      {
+        name: 'phase-a-licious',
+        handlers: [ 'SimpleWorker' ],
+        transitions_to: 'finished'
+      },
+      {
+        name: 'finished',
+        is_final: true
+      }
+    ],
+    [
       {
         name: 'pending',
         is_initial: true,
@@ -120,6 +120,16 @@ def self.make_workflow(name)
         is_final: true
       }
     ]
+]
+
+@@total_workflows = 0
+def self.make_workflow(name)
+  return if @@total_workflows >= 1000
+  @@total_workflows += 1
+  name += "##{@@total_workflows}"
+  @workflow = Distribot::Workflow.new(
+    name: name,
+    phases: @@phase_groups.sample
   )
   @workflow.save!
 end
@@ -156,7 +166,7 @@ pp 'payload(distribot.workflow.phase.started)' => payload
             Kernel.const_get(handler).enumerate_jobs(workflow) do |jobs|
               job_count += jobs.count
               Distribot.redis.incrby queue_name, jobs.count
-puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
+#puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
               jobs.each{|job| Distribot.publish! queue_name, job.to_json }
             end
             { queue_name: queue_name, job_count: job_count, handler: handler }
@@ -175,7 +185,7 @@ puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
     # because they are triggering end of phase intead (which is bad, because it's getting called once per handler)
     def initialize
       Distribot.queue('distribot.workflow.handler.finished').subscribe do |_, _, payload|
-pp 'read(distribot.workflow.handler.finished)' => payload
+#pp 'read(distribot.workflow.handler.finished)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         # Figure out all this workflow's task queue counters:
         workflow = Distribot::Workflow.find(info[:workflow_id])
@@ -237,7 +247,7 @@ pp 'read(distribot.workflow.handler.finished)' => payload
     def initialize
       semaphore = Mutex.new
       Distribot.queue('distribot.workflow.handler.start').subscribe do |_, _, payload|
-pp 'payload(distribot.workflow.handler.start)' => payload
+#pp 'payload(distribot.workflow.handler.start)' => payload
         data = JSON.parse(payload, symbolize_names: true)
         finished_queue = data[:queue_name] + '.finished'
         workflow_id, phase = /distribot\.workflow\.(?<workflow_id>.+?)\.(?<phase>.+?)\./.match( data[:queue_name] ).captures
@@ -271,8 +281,9 @@ end
         workflow = Distribot::Workflow.find(info[:workflow_id])
         if workflow.current_phase == info[:phase]
           if workflow.next_phase
-pp 'payload(distribot.workflow.phase.finished)' => payload
-pp workflow.id => 'transition_to(' + workflow.next_phase + ')'
+puts "WORKFLOW #{workflow.name}: Transition To #{workflow.next_phase}"
+#pp 'payload(distribot.workflow.phase.finished)' => payload
+#pp workflow.id => 'transition_to(' + workflow.next_phase + ')'
             workflow.transition_to! workflow.next_phase
           else
             # This workflow is finished - send it on down the line!
@@ -288,8 +299,8 @@ pp workflow.id => 'transition_to(' + workflow.next_phase + ')'
   class WorkflowFinishedHandler
     def initialize
       Distribot.queue('distribot.workflow.finished').subscribe do |_, _, payload|
-pp 'payload(distribot.workflow.finished)' => payload
-puts "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+#pp 'payload(distribot.workflow.finished)' => payload
+#puts "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find(info[:workflow_id])
 puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"

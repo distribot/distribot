@@ -1,0 +1,15 @@
+
+
+distribot:
+#  image: distribot/dev
+  build: .
+  dockerfile: ./Dockerfile
+  volumes:
+    - ./:/var/www/distribot
+  environment:
+    - TERM=xterm
+  working_dir: /var/www/distribot
+  command: bash -c "./provision_vm.sh && tail -f /dev/null"
+  ports:
+    - 443
+    - 15672
