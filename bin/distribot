@@ -17,7 +17,7 @@ class GoogleSearcher
 
   def self.enumerate_jobs(workflow, &callback)
     # get whatever we need from workflow.meta
-    jobs = (0..1_000).to_a
+    jobs = (0..10).to_a
     jobs.in_groups_of(50, false).each do |chunk|
       callback.call(chunk.map{|num| {a_number: num} })
     end
@@ -33,9 +33,23 @@ class BingSearcher
 
   def self.enumerate_jobs(workflow, &callback)
     # get whatever we need from workflow.meta
-    jobs = (0..1_000).to_a
+    jobs = (0..10).to_a
     jobs.in_groups_of(50, false).each do |chunk|
       callback.call(chunk.map{|num| {a_number: num} })
+    end
+  end
+end
+
+class YahooSearcher < GoogleSearcher; end
+
+class Frobnicator
+  def self.perform(job, &callback)
+    puts "#{self}: performing job ##{job}.."
+    callback.call()
+  end
+  def self.enumerate_jobs(workflow, &callback)
+    (0..10).to_a.each do |id|
+      callback.call([{id: id}])
     end
   end
 end
@@ -77,7 +91,7 @@ pp 'payload(distribot.workflow.phase.started)' => payload
             Distribot.redis.incrby queue_name, jobs.count
             jobs.each{|job| Distribot.publish! queue_name, job.to_json }
           end
-          { queue_name: queue_name, job_count: job_count }
+          { queue_name: queue_name, job_count: job_count, handler: handler }
         end
 
         queue_counts.each do |info|
@@ -90,10 +104,28 @@ pp 'payload(distribot.workflow.phase.started)' => payload
   class HandlerFinishedHandler
     # XXX: need to handle end of handlers
     # because they are triggering end of phase intead (which is bad, because it's getting called once per handler)
+    def initialize
+      Distribot.queue('distribot.workflow.handler.finished').subscribe do |_, _, payload|
+pp 'read(distribot.workflow.handler.finished)' => payload
+        info = JSON.parse(payload, symbolize_names: true)
+        # Figure out all this workflow's task queue counters:
+        workflow = Distribot::Workflow.find(info[:workflow_id])
+        counters = workflow.phase(info[:phase]).handlers.map do |handler|
+          "distribot.workflow.#{workflow.id}.#{info[:phase]}.#{handler}.tasks"
+        end
+        # If their counters are all at zero, then this phase is complete:
+        if counters.select{|counter_key| Distribot.redis.get(counter_key).to_i > 0 }.empty?
+          Distribot.publish! 'distribot.workflow.phase.finished', {
+            workflow_id: workflow.id,
+            phase: info[:phase]
+          }.to_json
+        end
+      end
+    end
   end
 
   class TaskFinishedHandler
-    def initialize(workflow_id, queue_name)
+    def initialize(workflow_id, queue_name, handler)
       workflow = Distribot::Workflow.find(workflow_id)
       counter_key = queue_name.gsub('.finished', '')
       begin
@@ -103,7 +135,7 @@ pp 'payload(distribot.workflow.phase.started)' => payload
             Distribot.publish! 'distribot.workflow.handler.finished', {
               workflow_id: workflow_id,
               phase: Distribot::Workflow.find(workflow_id).current_phase,
-              handler:
+              handler: handler
             }.to_json
           end
         end
@@ -118,7 +150,7 @@ pp 'payload(distribot.workflow.phase.started)' => payload
       Distribot.queue('distribot.workflow.phase.enqueued').subscribe do |_, _, payload|
         info = JSON.parse(payload, symbolize_names: true)
 pp 'read(distribot.workflow.phase.enqueued)' => payload
-        TaskFinishedHandler.new( info[:workflow_id], info[:queue_name] + '.finished' )
+        TaskFinishedHandler.new( info[:workflow_id], info[:queue_name] + '.finished', info[:handler] )
 puts "WAITING FOR ALL WORKERS TO FINISH..."
 
       end
@@ -145,16 +177,19 @@ pp 'payload(distribot.workflow.handler.start)' => payload
   class PhaseFinishedHandler
     def initialize
       Distribot.queue('distribot.workflow.phase.finished').subscribe do |_, _, payload|
-pp 'payload(distribot.workflow.phase.finished)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find(info[:workflow_id])
-        if workflow.next_phase
-          workflow.transition_to! workflow.next_phase
-        else
-          # This workflow is finished - send it on down the line!
-          Distribot.publish! 'distribot.workflow.finished', {
-            workflow_id: workflow.id
-          }.to_json
+        if workflow.current_phase == info[:phase]
+          if workflow.next_phase
+pp 'payload(distribot.workflow.phase.finished)' => payload
+pp workflow.id => 'transition_to(' + workflow.next_phase + ')'
+            workflow.transition_to! workflow.next_phase
+          else
+            # This workflow is finished - send it on down the line!
+            Distribot.publish! 'distribot.workflow.finished', {
+              workflow_id: workflow.id
+            }.to_json
+          end
         end
       end
     end
@@ -184,7 +219,12 @@ end
     },
     {
       name: 'working',
-      handlers: [ 'GoogleSearcher', 'BingSearcher' ],
+      handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+      transitions_to: 'frobnicating'
+    },
+    {
+      name: 'frobnicating',
+      handlers: [ 'Frobnicator' ],
       transitions_to: 'finished'
     },
     {
@@ -198,6 +238,7 @@ end
 started = Distribot::PhaseStartedHandler.new
 handler_runner = Distribot::HandlerRunner.new
 enqueued = Distribot::PhaseEnqueuedHandler.new
+handler_finished = Distribot::HandlerFinishedHandler.new
 phase_finished = Distribot::PhaseFinishedHandler.new
 finished = Distribot::WorkflowFinishedHandler.new
 

@@ -63,6 +63,7 @@ module Distribot
   end
 
   def self.publish!(queue, json)
+sleep 3 unless queue =~ /\.task/
     bunny_channel.default_exchange.publish json, routing_key: queue(queue).name
   end
 end
