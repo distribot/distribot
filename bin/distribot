@@ -12,7 +12,7 @@ require 'active_support/json'
 class GoogleSearcher
   def self.perform(context, job, &callback)
     puts "#{self}: Doing job '#{job}'..."
-`curl -k --silent http://www.example.com/robots.txt?#{self} > /dev/null`
+#{}`curl -k --silent http://www.example.com/robots.txt?#{self} > /dev/null`
     callback.call()
   end
 
@@ -49,7 +49,7 @@ class FooBarBaz_F < GoogleSearcher; end
 class Frobnicator
   def self.perform(context, job, &callback)
     puts "#{self}: performing job #{context.workflow_id}.#{context.phase} ##{job}.."
-`curl -k --silent http://www.example.com/robots.txt > /dev/null`
+#{}`curl -k --silent http://www.example.com/robots.txt > /dev/null`
     callback.call()
   end
   def self.enumerate_jobs(workflow, &callback)
@@ -61,6 +61,7 @@ module Example
 
 @@total_workflows = 0
 def self.make_workflow(name)
+  return if @@total_workflows >= 10_000
   @@total_workflows += 1
   name += "##{@@total_workflows}"
   @workflow = Distribot::Workflow.new(
@@ -292,6 +293,7 @@ puts "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find(info[:workflow_id])
 puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
+        Example.make_workflow("Testy")
         Example.make_workflow("Testy")
         # TODO: mark this workflow as 'finished'
         # Maybe via Sidekiq.
