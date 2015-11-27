@@ -8,18 +8,20 @@ require 'active_support/core_ext/object'
 require 'active_support/core_ext/array'
 require 'active_support/json'
 
+MAX_WORKFLOWS = ENV['MAX_WORKFLOWS'].to_i > 0 ? ENV['MAX_WORKFLOWS'].to_i : 100
 
 class BaseWorker
   def self.perform(context, job, &callback)
-#    puts "#{self}: Doing job '#{job}'..."
+    puts "#{self}: Doing job '#{job}'... #{context.workflow_id}.#{context.phase}"
 #{}`curl -k --silent http://www.example.com/robots.txt?#{self} > /dev/null`
     callback.call()
   end
 
-  def self.enumerate_jobs(workflow, &callback)
+  def self.enumerate_jobs(context, workflow, &callback)
     # get whatever we need from workflow.meta
     jobs = (0..10).to_a
-    jobs.in_groups_of(50, false).each do |chunk|
+puts "----------- ABOUT TO ENUMERATE JOBS for #{context.workflow_id}.#{context.phase} --------------"
+    jobs.in_groups_of(2, false).each do |chunk|
       callback.call(chunk.map{|num| {a_number: num} })
     end
   end
@@ -61,70 +63,167 @@ module Example
         handlers: [ 'SimpleWorker' ],
         transitions_to: 'finished'
       },
+      # {
+      #   name: 'phase-a-RAMA',
+      #   handlers: [ 'SimpleWorker' ],
+      #   transitions_to: 'finished'
+      # },
       {
         name: 'finished',
         is_final: true
       }
     ],
-    [
-      {
-        name: 'pending',
-        is_initial: true,
-        transitions_to: 'phase1'
-      },
-      {
-        name: 'phase1',
-        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-        transitions_to: 'phase2'
-      },
-      {
-        name: 'phase2',
-        handlers: [
-          'Frobnicator',
-          'FooBarBaz_0',
-          'FooBarBaz_1',
-          'FooBarBaz_2',
-          'FooBarBaz_3',
-          'FooBarBaz_4',
-          'FooBarBaz_5',
-          'FooBarBaz_6',
-          'FooBarBaz_7',
-          'FooBarBaz_8',
-          'FooBarBaz_9',
-          'FooBarBaz_A',
-          'FooBarBaz_B',
-          'FooBarBaz_C',
-          'FooBarBaz_D',
-          'FooBarBaz_E',
-          'FooBarBaz_F',
-        ],
-        transitions_to: 'phase3'
-      },
-      {
-        name: 'phase3',
-        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-        transitions_to: 'phase4'
-      },
-      {
-        name: 'phase4',
-        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-        transitions_to: 'phase5'
-      },
-      {
-        name: 'phase5',
-        handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-        transitions_to: 'finished'
-      },
-      {
-        name: 'finished',
-        is_final: true
-      }
-    ]
+    # [
+    #   {
+    #     name: 'pending',
+    #     is_initial: true,
+    #     transitions_to: 'phase1'
+    #   },
+    #   {
+    #     name: 'phase1',
+    #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+    #     transitions_to: 'phase2'
+    #   },
+    #   {
+    #     name: 'phase2',
+    #     handlers: [
+    #       'Frobnicator',
+    #       'FooBarBaz_0',
+    #       'FooBarBaz_1',
+    #       'FooBarBaz_2',
+    #       'FooBarBaz_3',
+    #       'FooBarBaz_4',
+    #       'FooBarBaz_5',
+    #       'FooBarBaz_6',
+    #       'FooBarBaz_7',
+    #       'FooBarBaz_8',
+    #       'FooBarBaz_9',
+    #       'FooBarBaz_A',
+    #       'FooBarBaz_B',
+    #       'FooBarBaz_C',
+    #       'FooBarBaz_D',
+    #       'FooBarBaz_E',
+    #       'FooBarBaz_F',
+    #     ],
+    #     transitions_to: 'phase2b'
+    #   },
+    #   {
+    #     name: 'phase2b',
+    #     handlers: [
+    #       'Frobnicator',
+    #       'FooBarBaz_0',
+    #       'FooBarBaz_1',
+    #       'FooBarBaz_2',
+    #       'FooBarBaz_3',
+    #       'FooBarBaz_4',
+    #       'FooBarBaz_5',
+    #       'FooBarBaz_6',
+    #       'FooBarBaz_7',
+    #       'FooBarBaz_8',
+    #       'FooBarBaz_9',
+    #       'FooBarBaz_A',
+    #       'FooBarBaz_B',
+    #       'FooBarBaz_C',
+    #       'FooBarBaz_D',
+    #       'FooBarBaz_E',
+    #       'FooBarBaz_F',
+    #     ],
+    #     transitions_to: 'phase2c'
+    #   },
+    #   {
+    #     name: 'phase2c',
+    #     handlers: [
+    #       'Frobnicator',
+    #       'FooBarBaz_0',
+    #       'FooBarBaz_1',
+    #       'FooBarBaz_2',
+    #       'FooBarBaz_3',
+    #       'FooBarBaz_4',
+    #       'FooBarBaz_5',
+    #       'FooBarBaz_6',
+    #       'FooBarBaz_7',
+    #       'FooBarBaz_8',
+    #       'FooBarBaz_9',
+    #       'FooBarBaz_A',
+    #       'FooBarBaz_B',
+    #       'FooBarBaz_C',
+    #       'FooBarBaz_D',
+    #       'FooBarBaz_E',
+    #       'FooBarBaz_F',
+    #     ],
+    #     transitions_to: 'phase2d'
+    #   },
+    #   {
+    #     name: 'phase2d',
+    #     handlers: [
+    #       'Frobnicator',
+    #       'FooBarBaz_0',
+    #       'FooBarBaz_1',
+    #       'FooBarBaz_2',
+    #       'FooBarBaz_3',
+    #       'FooBarBaz_4',
+    #       'FooBarBaz_5',
+    #       'FooBarBaz_6',
+    #       'FooBarBaz_7',
+    #       'FooBarBaz_8',
+    #       'FooBarBaz_9',
+    #       'FooBarBaz_A',
+    #       'FooBarBaz_B',
+    #       'FooBarBaz_C',
+    #       'FooBarBaz_D',
+    #       'FooBarBaz_E',
+    #       'FooBarBaz_F',
+    #     ],
+    #     transitions_to: 'phase2e'
+    #   },
+    #   {
+    #     name: 'phase2e',
+    #     handlers: [
+    #       'Frobnicator',
+    #       'FooBarBaz_0',
+    #       'FooBarBaz_1',
+    #       'FooBarBaz_2',
+    #       'FooBarBaz_3',
+    #       'FooBarBaz_4',
+    #       'FooBarBaz_5',
+    #       'FooBarBaz_6',
+    #       'FooBarBaz_7',
+    #       'FooBarBaz_8',
+    #       'FooBarBaz_9',
+    #       'FooBarBaz_A',
+    #       'FooBarBaz_B',
+    #       'FooBarBaz_C',
+    #       'FooBarBaz_D',
+    #       'FooBarBaz_E',
+    #       'FooBarBaz_F',
+    #     ],
+    #     transitions_to: 'phase3'
+    #   },
+    #   {
+    #     name: 'phase3',
+    #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+    #     transitions_to: 'phase4'
+    #   },
+    #   {
+    #     name: 'phase4',
+    #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+    #     transitions_to: 'phase5'
+    #   },
+    #   {
+    #     name: 'phase5',
+    #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+    #     transitions_to: 'finished'
+    #   },
+    #   {
+    #     name: 'finished',
+    #     is_final: true
+    #   }
+    # ]
 ]
 
 @@total_workflows = 0
 def self.make_workflow(name)
-  return if @@total_workflows >= 1000
+  return if @@total_workflows >= MAX_WORKFLOWS
   @@total_workflows += 1
   name += "##{@@total_workflows}"
   @workflow = Distribot::Workflow.new(
@@ -140,7 +239,6 @@ module Distribot
   class PhaseStartedHandler
     def initialize
       Distribot.queue('distribot.workflow.phase.started').subscribe do |_, _, payload|
-pp 'payload(distribot.workflow.phase.started)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find( info[:workflow_id] )
         phase = workflow.phase( workflow.current_phase )
@@ -163,16 +261,17 @@ pp 'payload(distribot.workflow.phase.started)' => payload
 
             # Insert these jobs into the handler's queue:
             job_count = 0
-            Kernel.const_get(handler).enumerate_jobs(workflow) do |jobs|
-              job_count += jobs.count
+            context = OpenStruct.new(phase: phase.name, workflow_id: workflow.id)
+            Kernel.const_get(handler).enumerate_jobs(context, workflow) do |jobs|
               Distribot.redis.incrby queue_name, jobs.count
-#puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
+puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
               jobs.each{|job| Distribot.publish! queue_name, job.to_json }
             end
-            { queue_name: queue_name, job_count: job_count, handler: handler }
+            { queue_name: queue_name, handler: handler }
           end
 
           queue_counts.each do |info|
+puts "Phase Enqueued! #{phase.name}"
             Distribot.publish! 'distribot.workflow.phase.enqueued', info.merge(workflow_id: workflow.id).to_json
           end
         end
@@ -185,7 +284,7 @@ pp 'payload(distribot.workflow.phase.started)' => payload
     # because they are triggering end of phase intead (which is bad, because it's getting called once per handler)
     def initialize
       Distribot.queue('distribot.workflow.handler.finished').subscribe do |_, _, payload|
-#pp 'read(distribot.workflow.handler.finished)' => payload
+pp 'read(distribot.workflow.handler.finished)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         # Figure out all this workflow's task queue counters:
         workflow = Distribot::Workflow.find(info[:workflow_id])
@@ -220,13 +319,15 @@ pp 'payload(distribot.workflow.phase.started)' => payload
             phase: Distribot::Workflow.find(workflow_id).current_phase,
             handler: handler
           }.to_json
-          self.cancel
+
+          self.cancel(queue_name)
 
         end
       end
     end
 
-    def cancel
+    def cancel(queue_name)
+      puts "Cancelling consumer of #{queue_name}"
       self.consumer.cancel
     end
   end
@@ -247,19 +348,19 @@ pp 'payload(distribot.workflow.phase.started)' => payload
     def initialize
       semaphore = Mutex.new
       Distribot.queue('distribot.workflow.handler.start').subscribe do |_, _, payload|
-#pp 'payload(distribot.workflow.handler.start)' => payload
+pp 'payload(distribot.workflow.handler.start)' => payload
         data = JSON.parse(payload, symbolize_names: true)
         finished_queue = data[:queue_name] + '.finished'
         workflow_id, phase = /distribot\.workflow\.(?<workflow_id>.+?)\.(?<phase>.+?)\./.match( data[:queue_name] ).captures
         context = OpenStruct.new(data.merge(phase: phase, workflow_id: workflow_id))
         @@consumers << Distribot.queue(data[:queue_name]).subscribe do |_, _, payload|
           task = JSON.parse(payload, symbolize_names: true)
-Thread.new do
-          Kernel.const_get(data[:handler]).perform(context, task) do
-            # Announce this task as finished:
-            Distribot.publish! finished_queue, {foo: :bar}.to_json
+          Thread.new do
+            Kernel.const_get(data[:handler]).perform(context, task) do
+              # Announce this task as finished:
+              Distribot.publish! finished_queue, {foo: :bar}.to_json
+            end
           end
-end
         end
       end
     end
@@ -282,8 +383,6 @@ end
         if workflow.current_phase == info[:phase]
           if workflow.next_phase
 puts "WORKFLOW #{workflow.name}: Transition To #{workflow.next_phase}"
-#pp 'payload(distribot.workflow.phase.finished)' => payload
-#pp workflow.id => 'transition_to(' + workflow.next_phase + ')'
             workflow.transition_to! workflow.next_phase
           else
             # This workflow is finished - send it on down the line!
@@ -299,8 +398,6 @@ puts "WORKFLOW #{workflow.name}: Transition To #{workflow.next_phase}"
   class WorkflowFinishedHandler
     def initialize
       Distribot.queue('distribot.workflow.finished').subscribe do |_, _, payload|
-#pp 'payload(distribot.workflow.finished)' => payload
-#puts "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find(info[:workflow_id])
 puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
@@ -322,15 +419,7 @@ handler_finished = Distribot::HandlerFinishedHandler.new
 phase_finished = Distribot::PhaseFinishedHandler.new
 finished = Distribot::WorkflowFinishedHandler.new
 
-Thread.new do
-  (1..1).to_a.each do |num|
-    Example.make_workflow "Testy"
-#    sleep 2
-  end
-  puts "Finished making consumers (from now on, only Cancelling)"
-end
-
-sleep 1
+Example.make_workflow "Testy"
 Distribot::WorkflowCreatedHandler.new
 
 

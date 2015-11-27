@@ -4,8 +4,10 @@ set -e
 
 sudo apt-get -y update
 sudo apt-get -y autoremove
-sudo apt-get install -y ruby2.0 ruby2.0-dev build-essential git redis-server wget vim
+sudo apt-get install -y ruby2.0 ruby2.0-dev build-essential git redis-server wget vim python
 sudo ln -sf /usr/bin/ruby2.0 /usr/bin/ruby && sudo ln -sf /usr/bin/gem2.0 /usr/bin/gem
+
+sudo service redis-server restart
 
 if ! gem list | grep bundler; then
   sudo gem install bundler --no-ri --no-rdoc
@@ -76,7 +78,8 @@ else
   sudo chmod 0755 -R /data/rabbitmq
   sudo chown -R rabbitmq:rabbitmq /data/rabbitmq
 fi
-
+sudo wget -O /usr/bin/rabbitmqadmin http://localhost:15672/cli/rabbitmqadmin
+sudo chmod +x /usr/bin/rabbitmqadmin
 
 cd /var/www/distribot
 bundle

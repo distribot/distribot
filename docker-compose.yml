@@ -1,9 +1,9 @@
 
 
 distribot:
-#  image: distribot/dev
-  build: .
-  dockerfile: ./Dockerfile
+  image: distribot/dev
+  # build: .
+  # dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
