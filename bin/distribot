@@ -11,7 +11,8 @@ require 'active_support/json'
 
 class GoogleSearcher
   def self.perform(job, &callback)
-#    puts "#{self}: Doing job '#{job}'..."
+    puts "#{self}: Doing job '#{job}'..."
+    sleep 0.1
     callback.call()
   end
 
@@ -25,26 +26,14 @@ class GoogleSearcher
 end
 
 
-class BingSearcher
-  def self.perform(job, &callback)
-#    puts "#{self}: Doing job '#{job}'..."
-    callback.call()
-  end
-
-  def self.enumerate_jobs(workflow, &callback)
-    # get whatever we need from workflow.meta
-    jobs = (0..10).to_a
-    jobs.in_groups_of(50, false).each do |chunk|
-      callback.call(chunk.map{|num| {a_number: num} })
-    end
-  end
-end
+class BingSearcher < GoogleSearcher; end
 
 class YahooSearcher < GoogleSearcher; end
 
 class Frobnicator
   def self.perform(job, &callback)
-#    puts "#{self}: performing job ##{job}.."
+    puts "#{self}: performing job ##{job}.."
+    sleep 0.1
     callback.call()
   end
   def self.enumerate_jobs(workflow, &callback)
@@ -57,7 +46,7 @@ module Distribot
   class WorkflowCreatedHandler
     def initialize
       Distribot.queue('distribot.workflow.created').subscribe do |_, _, payload|
-#pp 'payload(distribot.workflow.created)' => payload
+pp 'payload(distribot.workflow.created)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find( info[:workflow_id] )
         workflow.transition_to! workflow.next_phase
@@ -68,7 +57,7 @@ module Distribot
   class PhaseStartedHandler
     def initialize
       Distribot.queue('distribot.workflow.phase.started').subscribe do |_, _, payload|
-#pp 'payload(distribot.workflow.phase.started)' => payload
+pp 'payload(distribot.workflow.phase.started)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find( info[:workflow_id] )
         phase = workflow.phase( workflow.current_phase )
@@ -113,7 +102,7 @@ puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
     # because they are triggering end of phase intead (which is bad, because it's getting called once per handler)
     def initialize
       Distribot.queue('distribot.workflow.handler.finished').subscribe do |_, _, payload|
-#pp 'read(distribot.workflow.handler.finished)' => payload
+pp 'read(distribot.workflow.handler.finished)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         # Figure out all this workflow's task queue counters:
         workflow = Distribot::Workflow.find(info[:workflow_id])
@@ -163,7 +152,7 @@ puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
     def initialize
       Distribot.queue('distribot.workflow.phase.enqueued').subscribe do |_, _, payload|
         info = JSON.parse(payload, symbolize_names: true)
-#pp 'read(distribot.workflow.phase.enqueued)' => payload
+pp 'read(distribot.workflow.phase.enqueued)' => payload
         TaskFinishedHandler.new( info[:workflow_id], info[:queue_name] + '.finished', info[:handler] )
 #puts "WAITING FOR ALL WORKERS TO FINISH..."
 
@@ -177,7 +166,7 @@ puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
     def initialize
       semaphore = Mutex.new
       Distribot.queue('distribot.workflow.handler.start').subscribe do |_, _, payload|
-#pp 'payload(distribot.workflow.handler.start)' => payload
+pp 'payload(distribot.workflow.handler.start)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         finished_queue = info[:queue_name] + '.finished'
         @@consumers << Distribot.queue(info[:queue_name]).subscribe do |_, _, payload|
@@ -207,7 +196,7 @@ puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
         workflow = Distribot::Workflow.find(info[:workflow_id])
         if workflow.current_phase == info[:phase]
           if workflow.next_phase
-#pp 'payload(distribot.workflow.phase.finished)' => payload
+pp 'payload(distribot.workflow.phase.finished)' => payload
 pp workflow.id => 'transition_to(' + workflow.next_phase + ')'
             workflow.transition_to! workflow.next_phase
           else
@@ -289,6 +278,7 @@ finished = Distribot::WorkflowFinishedHandler.new
 
 Thread.new do
   (1..1_000).to_a.each do |num|
+    puts "MAKING WORKFLOW \##{num}"
     make_workflow "workflow number #{num}"
     sleep 0.5
   end
