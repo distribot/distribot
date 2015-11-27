@@ -48,9 +48,7 @@ class Frobnicator
     callback.call()
   end
   def self.enumerate_jobs(workflow, &callback)
-    (0..10).to_a.each do |id|
-      callback.call([{id: id}])
-    end
+    callback.call((0..10).to_a.map{|id| {id: id} })
   end
 end
 
@@ -59,7 +57,7 @@ module Distribot
   class WorkflowCreatedHandler
     def initialize
       Distribot.queue('distribot.workflow.created').subscribe do |_, _, payload|
-pp 'payload(distribot.workflow.created)' => payload
+#pp 'payload(distribot.workflow.created)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find( info[:workflow_id] )
         workflow.transition_to! workflow.next_phase
@@ -70,7 +68,7 @@ pp 'payload(distribot.workflow.created)' => payload
   class PhaseStartedHandler
     def initialize
       Distribot.queue('distribot.workflow.phase.started').subscribe do |_, _, payload|
-pp 'payload(distribot.workflow.phase.started)' => payload
+#pp 'payload(distribot.workflow.phase.started)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find( info[:workflow_id] )
         phase = workflow.phase( workflow.current_phase )
@@ -96,6 +94,7 @@ pp 'payload(distribot.workflow.phase.started)' => payload
             Kernel.const_get(handler).enumerate_jobs(workflow) do |jobs|
               job_count += jobs.count
               Distribot.redis.incrby queue_name, jobs.count
+puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
               jobs.each{|job| Distribot.publish! queue_name, job.to_json }
             end
             { queue_name: queue_name, job_count: job_count, handler: handler }
@@ -114,13 +113,14 @@ pp 'payload(distribot.workflow.phase.started)' => payload
     # because they are triggering end of phase intead (which is bad, because it's getting called once per handler)
     def initialize
       Distribot.queue('distribot.workflow.handler.finished').subscribe do |_, _, payload|
-pp 'read(distribot.workflow.handler.finished)' => payload
+#pp 'read(distribot.workflow.handler.finished)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         # Figure out all this workflow's task queue counters:
         workflow = Distribot::Workflow.find(info[:workflow_id])
         counters = workflow.phase(info[:phase]).handlers.map do |handler|
           "distribot.workflow.#{workflow.id}.#{info[:phase]}.#{handler}.tasks"
         end
+        HandlerRunner.cancel_consumers_for("distribot.workflow.#{workflow.id}.#{info[:phase]}.#{info[:handler]}.tasks")
         # If their counters are all at zero, then this phase is complete:
         if counters.select{|counter_key| Distribot.redis.get(counter_key).to_i > 0 }.empty?
           Distribot.publish! 'distribot.workflow.phase.finished', {
@@ -133,23 +133,29 @@ pp 'read(distribot.workflow.handler.finished)' => payload
   end
 
   class TaskFinishedHandler
+    attr_accessor :consumer
+
     def initialize(workflow_id, queue_name, handler)
+      semaphore = Mutex.new
+
       workflow = Distribot::Workflow.find(workflow_id)
       counter_key = queue_name.gsub('.finished', '')
-      begin
-        Distribot.queue(queue_name).subscribe do |_, _, payload|
-          Distribot.redis.decr counter_key
-          if Distribot.redis.get(counter_key).to_i <= 0
-            Distribot.publish! 'distribot.workflow.handler.finished', {
-              workflow_id: workflow_id,
-              phase: Distribot::Workflow.find(workflow_id).current_phase,
-              handler: handler
-            }.to_json
-          end
+      self.consumer = Distribot.queue(queue_name).subscribe do |_, _, payload|
+        Distribot.redis.decr counter_key
+        if Distribot.redis.get(counter_key).to_i <= 0
+          Distribot.publish! 'distribot.workflow.handler.finished', {
+            workflow_id: workflow_id,
+            phase: Distribot::Workflow.find(workflow_id).current_phase,
+            handler: handler
+          }.to_json
+          self.cancel
+
         end
-      rescue StandardError => e
-        puts "//////////////////////// FINISH ///////////////////"
       end
+    end
+
+    def cancel
+      self.consumer.cancel
     end
   end
 
@@ -157,21 +163,24 @@ pp 'read(distribot.workflow.handler.finished)' => payload
     def initialize
       Distribot.queue('distribot.workflow.phase.enqueued').subscribe do |_, _, payload|
         info = JSON.parse(payload, symbolize_names: true)
-pp 'read(distribot.workflow.phase.enqueued)' => payload
+#pp 'read(distribot.workflow.phase.enqueued)' => payload
         TaskFinishedHandler.new( info[:workflow_id], info[:queue_name] + '.finished', info[:handler] )
-puts "WAITING FOR ALL WORKERS TO FINISH..."
+#puts "WAITING FOR ALL WORKERS TO FINISH..."
 
       end
     end
   end
 
   class HandlerRunner
+    @@consumers = [ ]
+
     def initialize
+      semaphore = Mutex.new
       Distribot.queue('distribot.workflow.handler.start').subscribe do |_, _, payload|
-pp 'payload(distribot.workflow.handler.start)' => payload
+#pp 'payload(distribot.workflow.handler.start)' => payload
         info = JSON.parse(payload, symbolize_names: true)
         finished_queue = info[:queue_name] + '.finished'
-        Distribot.queue(info[:queue_name]).subscribe do |_, _, payload|
+        @@consumers << Distribot.queue(info[:queue_name]).subscribe do |_, _, payload|
           task = JSON.parse(payload, symbolize_names: true)
           Kernel.const_get(info[:handler]).perform task do
             # Announce this task as finished:
@@ -179,6 +188,15 @@ pp 'payload(distribot.workflow.handler.start)' => payload
           end
         end
       end
+    end
+
+    def self.add_consumer(consumer)
+      @@consumers << consumer
+    end
+
+    def self.cancel_consumers_for(queue_name)
+      @@consumers.select{|consumer| consumer.queue.name == queue_name}.map(&:cancel)
+      @@consumers = @@consumers.delete_if{|x| x.queue.name == queue_name}
     end
   end
 
@@ -189,7 +207,7 @@ pp 'payload(distribot.workflow.handler.start)' => payload
         workflow = Distribot::Workflow.find(info[:workflow_id])
         if workflow.current_phase == info[:phase]
           if workflow.next_phase
-pp 'payload(distribot.workflow.phase.finished)' => payload
+#pp 'payload(distribot.workflow.phase.finished)' => payload
 pp workflow.id => 'transition_to(' + workflow.next_phase + ')'
             workflow.transition_to! workflow.next_phase
           else
@@ -207,17 +225,7 @@ pp workflow.id => 'transition_to(' + workflow.next_phase + ')'
     def initialize
       Distribot.queue('distribot.workflow.finished').subscribe do |_, _, payload|
 pp 'payload(distribot.workflow.finished)' => payload
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
-puts "-------------------------------------------------------------------------"
+puts "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find(info[:workflow_id])
 puts "WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!"

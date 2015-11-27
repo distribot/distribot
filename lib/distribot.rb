@@ -37,7 +37,6 @@ module Distribot
       bunny.start
     end
     @@channel ||= bunny.create_channel
-#    @@channel.prefetch(1)
     @@channel
   end
 
