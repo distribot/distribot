@@ -19,9 +19,9 @@ class BaseWorker
 
   def self.enumerate_jobs(context, workflow, &callback)
     # get whatever we need from workflow.meta
-    jobs = (0..10).to_a
+    jobs = (0..1000).to_a
 puts "----------- ABOUT TO ENUMERATE JOBS for #{context.workflow_id}.#{context.phase} --------------"
-    jobs.in_groups_of(2, false).each do |chunk|
+    jobs.in_groups_of(20, false).each do |chunk|
       callback.call(chunk.map{|num| {a_number: num} })
     end
   end
@@ -401,6 +401,11 @@ puts "WORKFLOW #{workflow.name}: Transition To #{workflow.next_phase}"
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find(info[:workflow_id])
 puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
+if Distribot.bunny.queue_exists?("distribot.workflow.#{workflow.id}.finished")
+Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
+  foo: :bar
+}.to_json
+end
         Example.make_workflow("Testy")
         Example.make_workflow("Testy")
         # TODO: mark this workflow as 'finished'

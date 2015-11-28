@@ -20,7 +20,7 @@ module Distribot
       return obj
     end
 
-    def save!
+    def save!(&block)
       self.id ||= SecureRandom.uuid
       record_id = self.redis_id + ':definition'
       is_new = redis.keys(record_id).count <= 0
@@ -31,6 +31,37 @@ module Distribot
       }.to_json
       if is_new
         self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
+        if block_given?
+          finished_id = "distribot.workflow.#{self.id}.finished"
+          @consumer = Distribot.queue(finished_id).subscribe do |_, _, payload|
+puts "Finished"
+            Distribot.redis.set(finished_id, payload)
+          end
+          while true do
+            sleep 1
+            payload = Distribot.redis.get(finished_id)
+            unless payload.nil?
+puts "Cancelling"
+              @consumer.cancel
+              Distribot.redis.del(finished_id)
+              break
+            end
+          end
+
+          block.call(payload)
+          puts "GOT HERE"
+          # Thread.new do
+          #   while true do
+          #     continue_waiting = false
+          #     semaphore.synchronize do
+          #       continue_waiting = @wait
+          #     end
+          #     break unless continue_waiting
+          #     sleep 1
+          #     puts "."
+          #   end
+          # end.join
+        end
       end
     end
 
