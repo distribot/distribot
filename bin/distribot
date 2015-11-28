@@ -365,44 +365,6 @@ pp 'payload(distribot.workflow.handler.start)' => payload
     end
   end
 
-  class PhaseFinishedHandler
-    def initialize
-      Distribot.queue('distribot.workflow.phase.finished').subscribe do |_, _, payload|
-        info = JSON.parse(payload, symbolize_names: true)
-        workflow = Distribot::Workflow.find(info[:workflow_id])
-        if workflow.current_phase == info[:phase]
-          if workflow.next_phase
-puts "WORKFLOW #{workflow.name}: Transition To #{workflow.next_phase}"
-            workflow.transition_to! workflow.next_phase
-          else
-            # This workflow is finished - send it on down the line!
-            Distribot.publish! 'distribot.workflow.finished', {
-              workflow_id: workflow.id
-            }.to_json
-          end
-        end
-      end
-    end
-  end
-
-#   class WorkflowFinishedHandler
-#     def initialize
-#       Distribot.queue('distribot.workflow.finished').subscribe do |_, _, payload|
-#         info = JSON.parse(payload, symbolize_names: true)
-#         workflow = Distribot::Workflow.find(info[:workflow_id])
-# puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
-#         if Distribot.bunny.queue_exists?("distribot.workflow.#{workflow.id}.finished")
-#           Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
-#             workflow_id: workflow.id
-#           }.to_json
-#         end
-#         Example.make_workflow("Testy")
-#         Example.make_workflow("Testy")
-#         # TODO: mark this workflow as 'finished'
-#         # Maybe via Sidekiq.
-#       end
-#     end
-#   end
 end
 
 

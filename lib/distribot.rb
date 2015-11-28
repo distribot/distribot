@@ -10,6 +10,7 @@ require 'distribot/handler'
 require 'distribot/workflow_created_handler'
 require 'distribot/workflow_finished_handler'
 require 'distribot/phase_enqueued_handler'
+require 'distribot/phase_finished_handler'
 
 module Distribot
 
