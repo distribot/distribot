@@ -401,11 +401,11 @@ puts "WORKFLOW #{workflow.name}: Transition To #{workflow.next_phase}"
         info = JSON.parse(payload, symbolize_names: true)
         workflow = Distribot::Workflow.find(info[:workflow_id])
 puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
-if Distribot.bunny.queue_exists?("distribot.workflow.#{workflow.id}.finished")
-Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
-  foo: :bar
-}.to_json
-end
+        if Distribot.bunny.queue_exists?("distribot.workflow.#{workflow.id}.finished")
+          Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
+            workflow_id: workflow.id
+          }.to_json
+        end
         Example.make_workflow("Testy")
         Example.make_workflow("Testy")
         # TODO: mark this workflow as 'finished'
