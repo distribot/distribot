@@ -22,7 +22,7 @@ def make_workflow(name)
       {
         name: 'phase-a-licious',
         handlers: [ 'SimpleWorker' ],
-        transitions_to: 'finished'
+        transitions_to: 'phase-a-RAMA'
       },
       {
         name: 'phase-a-RAMA',
