@@ -8,9 +8,11 @@ require 'distribot/workflow'
 require 'distribot/phase'
 require 'distribot/handler'
 require 'distribot/workflow_created_handler'
-require 'distribot/workflow_finished_handler'
 require 'distribot/phase_enqueued_handler'
+require 'distribot/task_finished_handler'
+require 'distribot/handler_finished_handler'
 require 'distribot/phase_finished_handler'
+require 'distribot/workflow_finished_handler'
 
 module Distribot
 
@@ -73,5 +75,21 @@ module Distribot
   def self.publish!(queue_name, json)
     queue_obj = queue(queue_name)
     bunny_channel.default_exchange.publish json, routing_key: queue_obj.name
+  end
+
+  def self.fanout_exchange
+    @@fanout ||= bunny.create_channel.fanout('yay')
+  end
+
+  def self.subscribe_multi(queue_name, &block)
+    queue_obj = queue(queue_name)
+    queue_obj.bind( fanout_exchange ).subscribe do |delivery_info, properties, payload|
+      block.call(delivery_info, properties, payload)
+    end
+  end
+
+  def self.broadcast!(queue_name, json)
+    queue_obj = queue(queue_name)
+    fanout_exchange.publish json, routing_key: queue_obj.name
   end
 end

@@ -13,13 +13,13 @@ MAX_WORKFLOWS = ENV['MAX_WORKFLOWS'].to_i > 0 ? ENV['MAX_WORKFLOWS'].to_i : 100
 class BaseWorker
   def self.perform(context, job, &callback)
     puts "#{self}: Doing job '#{job}'... #{context.workflow_id}.#{context.phase}"
-#{}`curl -k --silent http://www.example.com/robots.txt?#{self} > /dev/null`
+#{}`curl -k http://www.example.com/robots.txt?#{self} > /dev/null`
     callback.call()
   end
 
   def self.enumerate_jobs(context, workflow, &callback)
     # get whatever we need from workflow.meta
-    jobs = (0..10_000).to_a
+    jobs = (1..1).to_a
 puts "----------- ABOUT TO ENUMERATE JOBS for #{context.workflow_id}.#{context.phase} --------------"
     jobs.in_groups_of(20, false).each do |chunk|
       callback.call(chunk.map{|num| {a_number: num} })
@@ -279,64 +279,10 @@ puts "Phase Enqueued! #{phase.name}"
     end
   end
 
-  class HandlerFinishedHandler
-    # XXX: need to handle end of handlers
-    # because they are triggering end of phase intead (which is bad, because it's getting called once per handler)
-    def initialize
-      Distribot.queue('distribot.workflow.handler.finished').subscribe do |_, _, payload|
-pp 'read(distribot.workflow.handler.finished)' => payload
-        info = JSON.parse(payload, symbolize_names: true)
-        # Figure out all this workflow's task queue counters:
-        workflow = Distribot::Workflow.find(info[:workflow_id])
-        counters = workflow.phase(info[:phase]).handlers.map do |handler|
-          "distribot.workflow.#{workflow.id}.#{info[:phase]}.#{handler}.tasks"
-        end
-        HandlerRunner.cancel_consumers_for("distribot.workflow.#{workflow.id}.#{info[:phase]}.#{info[:handler]}.tasks")
-        # If their counters are all at zero, then this phase is complete:
-        if counters.select{|counter_key| Distribot.redis.get(counter_key).to_i > 0 }.empty?
-          Distribot.publish! 'distribot.workflow.phase.finished', {
-            workflow_id: workflow.id,
-            phase: info[:phase]
-          }.to_json
-        end
-      end
-    end
-  end
-
-  class TaskFinishedHandler
-    attr_accessor :consumer
-
-    def initialize(workflow_id, queue_name, handler)
-      semaphore = Mutex.new
-
-      workflow = Distribot::Workflow.find(workflow_id)
-      counter_key = queue_name.gsub('.finished', '')
-      self.consumer = Distribot.queue(queue_name).subscribe do |_, _, payload|
-        Distribot.redis.decr counter_key
-        if Distribot.redis.get(counter_key).to_i <= 0
-          Distribot.publish! 'distribot.workflow.handler.finished', {
-            workflow_id: workflow_id,
-            phase: Distribot::Workflow.find(workflow_id).current_phase,
-            handler: handler
-          }.to_json
-
-          self.cancel(queue_name)
-
-        end
-      end
-    end
-
-    def cancel(queue_name)
-      puts "Cancelling consumer of #{queue_name}"
-      self.consumer.cancel
-    end
-  end
-
   class HandlerRunner
     @@consumers = [ ]
 
     def initialize
-      semaphore = Mutex.new
       Distribot.queue('distribot.workflow.handler.start').subscribe do |_, _, payload|
 pp 'payload(distribot.workflow.handler.start)' => payload
         data = JSON.parse(payload, symbolize_names: true)
@@ -360,8 +306,17 @@ pp 'payload(distribot.workflow.handler.start)' => payload
     end
 
     def self.cancel_consumers_for(queue_name)
-      @@consumers.select{|consumer| consumer.queue.name == queue_name}.map{|consumer| puts "Cancelling consumer of #{consumer.queue.name}"; consumer}.map(&:cancel)
+      @@consumers.select{|consumer| consumer.queue.name == queue_name}.map{|consumer| puts "Cancelling consumer of #{consumer.queue.name}".upcase; consumer}.map(&:cancel)
       @@consumers = @@consumers.delete_if{|x| x.queue.name == queue_name}
+    end
+  end
+
+  class HandlerConsumerCanceler
+    def initialize
+      Distribot.subscribe_multi('distribot.workflow.cancel.consumers') do |_, _, payload|
+        message = JSON.parse(payload, symbolize_names: true)
+        HandlerRunner.cancel_consumers_for(message[:queue])
+      end
     end
   end
 
@@ -369,16 +324,17 @@ end
 
 
 
+
 started = Distribot::PhaseStartedHandler.new
 handler_runner = Distribot::HandlerRunner.new
 enqueued = Distribot::PhaseEnqueuedHandler.new
+thing = Distribot::HandlerConsumerCanceler.new
 handler_finished = Distribot::HandlerFinishedHandler.new
 phase_finished = Distribot::PhaseFinishedHandler.new
 finished = Distribot::WorkflowFinishedHandler.new
 
 Example.make_workflow "Testy"
 Distribot::WorkflowCreatedHandler.new
-
 
 
 sleep
