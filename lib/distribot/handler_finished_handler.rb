@@ -8,9 +8,6 @@ module Distribot
     def callback(message)
       # Figure out all this workflow's task queue counters:
       workflow = Distribot::Workflow.find(message[:workflow_id])
-      counters = workflow.phase(message[:phase]).handlers.map do |handler|
-        "distribot.workflow.#{workflow.id}.#{message[:phase]}.#{handler}.tasks"
-      end
 
       # This is a message that goes out globally?
       cancel_consumers_for = "distribot.workflow.#{workflow.id}.#{message[:phase]}.#{message[:handler]}.tasks"
@@ -19,6 +16,9 @@ module Distribot
       }.to_json
 
       # If their counters are all at zero, then this phase is complete:
+      counters = workflow.phase(message[:phase]).handlers.map do |handler|
+        "distribot.workflow.#{workflow.id}.#{message[:phase]}.#{handler}.tasks"
+      end
       if counters.select{|counter_key| Distribot.redis.get(counter_key).to_i > 0 }.empty?
         Distribot.publish! 'distribot.workflow.phase.finished', {
           workflow_id: workflow.id,

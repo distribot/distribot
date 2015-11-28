@@ -31,7 +31,16 @@ describe Distribot::HandlerFinishedHandler do
   end
 
   describe '#callback' do
-    it 'cancels all consumers for this handler\'s tasks\' queues'
 
+    it 'cancels all consumers for this handler\'s tasks\' queues' do
+    end
+    context 'when all the remaining tasks for each handler in this phase' do
+      context 'are zero' do
+        it 'publishes a message to the phase.finished queue'
+      end
+      context 'are not yet zero' do
+        it 'does not publish to the phase.finished queue'
+      end
+    end
   end
 end
