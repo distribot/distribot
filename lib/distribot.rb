@@ -8,6 +8,7 @@ require 'distribot/workflow'
 require 'distribot/phase'
 require 'distribot/handler'
 require 'distribot/workflow_created_handler'
+require 'distribot/workflow_finished_handler'
 require 'distribot/phase_enqueued_handler'
 
 module Distribot
@@ -33,6 +34,10 @@ module Distribot
 
   def self.bunny
     @@bunny ||= Bunny.new( configuration.rabbitmq_url )
+  end
+
+  def self.queue_exists?(name)
+    bunny.queue_exists?(name)
   end
 
   def self.bunny_channel

@@ -51,187 +51,187 @@ class Frobnicator < BaseWorker; end
 
 module Example
 
-@@phase_groups = [
-    [
-      {
-        name: 'pending',
-        is_initial: true,
-        transitions_to: 'phase-a-licious'
-      },
-      {
-        name: 'phase-a-licious',
-        handlers: [ 'SimpleWorker' ],
-        transitions_to: 'finished'
-      },
-      # {
-      #   name: 'phase-a-RAMA',
-      #   handlers: [ 'SimpleWorker' ],
-      #   transitions_to: 'finished'
-      # },
-      {
-        name: 'finished',
-        is_final: true
-      }
-    ],
-    # [
-    #   {
-    #     name: 'pending',
-    #     is_initial: true,
-    #     transitions_to: 'phase1'
-    #   },
-    #   {
-    #     name: 'phase1',
-    #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-    #     transitions_to: 'phase2'
-    #   },
-    #   {
-    #     name: 'phase2',
-    #     handlers: [
-    #       'Frobnicator',
-    #       'FooBarBaz_0',
-    #       'FooBarBaz_1',
-    #       'FooBarBaz_2',
-    #       'FooBarBaz_3',
-    #       'FooBarBaz_4',
-    #       'FooBarBaz_5',
-    #       'FooBarBaz_6',
-    #       'FooBarBaz_7',
-    #       'FooBarBaz_8',
-    #       'FooBarBaz_9',
-    #       'FooBarBaz_A',
-    #       'FooBarBaz_B',
-    #       'FooBarBaz_C',
-    #       'FooBarBaz_D',
-    #       'FooBarBaz_E',
-    #       'FooBarBaz_F',
-    #     ],
-    #     transitions_to: 'phase2b'
-    #   },
-    #   {
-    #     name: 'phase2b',
-    #     handlers: [
-    #       'Frobnicator',
-    #       'FooBarBaz_0',
-    #       'FooBarBaz_1',
-    #       'FooBarBaz_2',
-    #       'FooBarBaz_3',
-    #       'FooBarBaz_4',
-    #       'FooBarBaz_5',
-    #       'FooBarBaz_6',
-    #       'FooBarBaz_7',
-    #       'FooBarBaz_8',
-    #       'FooBarBaz_9',
-    #       'FooBarBaz_A',
-    #       'FooBarBaz_B',
-    #       'FooBarBaz_C',
-    #       'FooBarBaz_D',
-    #       'FooBarBaz_E',
-    #       'FooBarBaz_F',
-    #     ],
-    #     transitions_to: 'phase2c'
-    #   },
-    #   {
-    #     name: 'phase2c',
-    #     handlers: [
-    #       'Frobnicator',
-    #       'FooBarBaz_0',
-    #       'FooBarBaz_1',
-    #       'FooBarBaz_2',
-    #       'FooBarBaz_3',
-    #       'FooBarBaz_4',
-    #       'FooBarBaz_5',
-    #       'FooBarBaz_6',
-    #       'FooBarBaz_7',
-    #       'FooBarBaz_8',
-    #       'FooBarBaz_9',
-    #       'FooBarBaz_A',
-    #       'FooBarBaz_B',
-    #       'FooBarBaz_C',
-    #       'FooBarBaz_D',
-    #       'FooBarBaz_E',
-    #       'FooBarBaz_F',
-    #     ],
-    #     transitions_to: 'phase2d'
-    #   },
-    #   {
-    #     name: 'phase2d',
-    #     handlers: [
-    #       'Frobnicator',
-    #       'FooBarBaz_0',
-    #       'FooBarBaz_1',
-    #       'FooBarBaz_2',
-    #       'FooBarBaz_3',
-    #       'FooBarBaz_4',
-    #       'FooBarBaz_5',
-    #       'FooBarBaz_6',
-    #       'FooBarBaz_7',
-    #       'FooBarBaz_8',
-    #       'FooBarBaz_9',
-    #       'FooBarBaz_A',
-    #       'FooBarBaz_B',
-    #       'FooBarBaz_C',
-    #       'FooBarBaz_D',
-    #       'FooBarBaz_E',
-    #       'FooBarBaz_F',
-    #     ],
-    #     transitions_to: 'phase2e'
-    #   },
-    #   {
-    #     name: 'phase2e',
-    #     handlers: [
-    #       'Frobnicator',
-    #       'FooBarBaz_0',
-    #       'FooBarBaz_1',
-    #       'FooBarBaz_2',
-    #       'FooBarBaz_3',
-    #       'FooBarBaz_4',
-    #       'FooBarBaz_5',
-    #       'FooBarBaz_6',
-    #       'FooBarBaz_7',
-    #       'FooBarBaz_8',
-    #       'FooBarBaz_9',
-    #       'FooBarBaz_A',
-    #       'FooBarBaz_B',
-    #       'FooBarBaz_C',
-    #       'FooBarBaz_D',
-    #       'FooBarBaz_E',
-    #       'FooBarBaz_F',
-    #     ],
-    #     transitions_to: 'phase3'
-    #   },
-    #   {
-    #     name: 'phase3',
-    #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-    #     transitions_to: 'phase4'
-    #   },
-    #   {
-    #     name: 'phase4',
-    #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-    #     transitions_to: 'phase5'
-    #   },
-    #   {
-    #     name: 'phase5',
-    #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
-    #     transitions_to: 'finished'
-    #   },
-    #   {
-    #     name: 'finished',
-    #     is_final: true
-    #   }
-    # ]
-]
+  @@phase_groups = [
+      [
+        {
+          name: 'pending',
+          is_initial: true,
+          transitions_to: 'phase-a-licious'
+        },
+        {
+          name: 'phase-a-licious',
+          handlers: [ 'SimpleWorker' ],
+          transitions_to: 'finished'
+        },
+        # {
+        #   name: 'phase-a-RAMA',
+        #   handlers: [ 'SimpleWorker' ],
+        #   transitions_to: 'finished'
+        # },
+        {
+          name: 'finished',
+          is_final: true
+        }
+      ],
+      # [
+      #   {
+      #     name: 'pending',
+      #     is_initial: true,
+      #     transitions_to: 'phase1'
+      #   },
+      #   {
+      #     name: 'phase1',
+      #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+      #     transitions_to: 'phase2'
+      #   },
+      #   {
+      #     name: 'phase2',
+      #     handlers: [
+      #       'Frobnicator',
+      #       'FooBarBaz_0',
+      #       'FooBarBaz_1',
+      #       'FooBarBaz_2',
+      #       'FooBarBaz_3',
+      #       'FooBarBaz_4',
+      #       'FooBarBaz_5',
+      #       'FooBarBaz_6',
+      #       'FooBarBaz_7',
+      #       'FooBarBaz_8',
+      #       'FooBarBaz_9',
+      #       'FooBarBaz_A',
+      #       'FooBarBaz_B',
+      #       'FooBarBaz_C',
+      #       'FooBarBaz_D',
+      #       'FooBarBaz_E',
+      #       'FooBarBaz_F',
+      #     ],
+      #     transitions_to: 'phase2b'
+      #   },
+      #   {
+      #     name: 'phase2b',
+      #     handlers: [
+      #       'Frobnicator',
+      #       'FooBarBaz_0',
+      #       'FooBarBaz_1',
+      #       'FooBarBaz_2',
+      #       'FooBarBaz_3',
+      #       'FooBarBaz_4',
+      #       'FooBarBaz_5',
+      #       'FooBarBaz_6',
+      #       'FooBarBaz_7',
+      #       'FooBarBaz_8',
+      #       'FooBarBaz_9',
+      #       'FooBarBaz_A',
+      #       'FooBarBaz_B',
+      #       'FooBarBaz_C',
+      #       'FooBarBaz_D',
+      #       'FooBarBaz_E',
+      #       'FooBarBaz_F',
+      #     ],
+      #     transitions_to: 'phase2c'
+      #   },
+      #   {
+      #     name: 'phase2c',
+      #     handlers: [
+      #       'Frobnicator',
+      #       'FooBarBaz_0',
+      #       'FooBarBaz_1',
+      #       'FooBarBaz_2',
+      #       'FooBarBaz_3',
+      #       'FooBarBaz_4',
+      #       'FooBarBaz_5',
+      #       'FooBarBaz_6',
+      #       'FooBarBaz_7',
+      #       'FooBarBaz_8',
+      #       'FooBarBaz_9',
+      #       'FooBarBaz_A',
+      #       'FooBarBaz_B',
+      #       'FooBarBaz_C',
+      #       'FooBarBaz_D',
+      #       'FooBarBaz_E',
+      #       'FooBarBaz_F',
+      #     ],
+      #     transitions_to: 'phase2d'
+      #   },
+      #   {
+      #     name: 'phase2d',
+      #     handlers: [
+      #       'Frobnicator',
+      #       'FooBarBaz_0',
+      #       'FooBarBaz_1',
+      #       'FooBarBaz_2',
+      #       'FooBarBaz_3',
+      #       'FooBarBaz_4',
+      #       'FooBarBaz_5',
+      #       'FooBarBaz_6',
+      #       'FooBarBaz_7',
+      #       'FooBarBaz_8',
+      #       'FooBarBaz_9',
+      #       'FooBarBaz_A',
+      #       'FooBarBaz_B',
+      #       'FooBarBaz_C',
+      #       'FooBarBaz_D',
+      #       'FooBarBaz_E',
+      #       'FooBarBaz_F',
+      #     ],
+      #     transitions_to: 'phase2e'
+      #   },
+      #   {
+      #     name: 'phase2e',
+      #     handlers: [
+      #       'Frobnicator',
+      #       'FooBarBaz_0',
+      #       'FooBarBaz_1',
+      #       'FooBarBaz_2',
+      #       'FooBarBaz_3',
+      #       'FooBarBaz_4',
+      #       'FooBarBaz_5',
+      #       'FooBarBaz_6',
+      #       'FooBarBaz_7',
+      #       'FooBarBaz_8',
+      #       'FooBarBaz_9',
+      #       'FooBarBaz_A',
+      #       'FooBarBaz_B',
+      #       'FooBarBaz_C',
+      #       'FooBarBaz_D',
+      #       'FooBarBaz_E',
+      #       'FooBarBaz_F',
+      #     ],
+      #     transitions_to: 'phase3'
+      #   },
+      #   {
+      #     name: 'phase3',
+      #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+      #     transitions_to: 'phase4'
+      #   },
+      #   {
+      #     name: 'phase4',
+      #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+      #     transitions_to: 'phase5'
+      #   },
+      #   {
+      #     name: 'phase5',
+      #     handlers: [ 'GoogleSearcher', 'BingSearcher', 'YahooSearcher' ],
+      #     transitions_to: 'finished'
+      #   },
+      #   {
+      #     name: 'finished',
+      #     is_final: true
+      #   }
+      # ]
+  ]
 
-@@total_workflows = 0
-def self.make_workflow(name)
-  return if @@total_workflows >= MAX_WORKFLOWS
-  @@total_workflows += 1
-  name += "##{@@total_workflows}"
-  @workflow = Distribot::Workflow.new(
-    name: name,
-    phases: @@phase_groups.sample
-  )
-  @workflow.save!
-end
+  @@total_workflows = 0
+  def self.make_workflow(name)
+    return if @@total_workflows >= MAX_WORKFLOWS
+    @@total_workflows += 1
+    name += "##{@@total_workflows}"
+    @workflow = Distribot::Workflow.new(
+      name: name,
+      phases: @@phase_groups.sample
+    )
+    @workflow.save!
+  end
 end
 
 module Distribot
@@ -332,16 +332,6 @@ pp 'read(distribot.workflow.handler.finished)' => payload
     end
   end
 
-#   class PhaseEnqueuedHandler
-#     def initialize
-#       Distribot.queue('distribot.workflow.phase.enqueued').subscribe do |_, _, payload|
-#         info = JSON.parse(payload, symbolize_names: true)
-# pp 'read(distribot.workflow.phase.enqueued)' => payload
-#         TaskFinishedHandler.new( info[:workflow_id], info[:queue_name] + '.finished', info[:handler] )
-#       end
-#     end
-#   end
-
   class HandlerRunner
     @@consumers = [ ]
 
@@ -395,24 +385,24 @@ puts "WORKFLOW #{workflow.name}: Transition To #{workflow.next_phase}"
     end
   end
 
-  class WorkflowFinishedHandler
-    def initialize
-      Distribot.queue('distribot.workflow.finished').subscribe do |_, _, payload|
-        info = JSON.parse(payload, symbolize_names: true)
-        workflow = Distribot::Workflow.find(info[:workflow_id])
-puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
-        if Distribot.bunny.queue_exists?("distribot.workflow.#{workflow.id}.finished")
-          Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
-            workflow_id: workflow.id
-          }.to_json
-        end
-        Example.make_workflow("Testy")
-        Example.make_workflow("Testy")
-        # TODO: mark this workflow as 'finished'
-        # Maybe via Sidekiq.
-      end
-    end
-  end
+#   class WorkflowFinishedHandler
+#     def initialize
+#       Distribot.queue('distribot.workflow.finished').subscribe do |_, _, payload|
+#         info = JSON.parse(payload, symbolize_names: true)
+#         workflow = Distribot::Workflow.find(info[:workflow_id])
+# puts "\n\nWORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
+#         if Distribot.bunny.queue_exists?("distribot.workflow.#{workflow.id}.finished")
+#           Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
+#             workflow_id: workflow.id
+#           }.to_json
+#         end
+#         Example.make_workflow("Testy")
+#         Example.make_workflow("Testy")
+#         # TODO: mark this workflow as 'finished'
+#         # Maybe via Sidekiq.
+#       end
+#     end
+#   end
 end
 
 
