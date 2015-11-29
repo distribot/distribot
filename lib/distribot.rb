@@ -9,6 +9,7 @@ require 'distribot/phase'
 require 'distribot/handler'
 require 'distribot/workflow_created_handler'
 require 'distribot/phase_started_handler'
+require 'distribot/worker'
 require 'distribot/phase_finished_handler'
 require 'distribot/workflow_finished_handler'
 
@@ -102,6 +103,7 @@ pp publish: queue_name, data: data
   end
 
   def self.subscribe(queue_name, &block)
+pp subscribe: queue_name
     queue_obj = queue(queue_name)
     queue_obj.subscribe do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))
@@ -112,6 +114,7 @@ pp publish: queue_name, data: data
     queue_obj = queue(queue_name)
     while true
       begin
+pp subscribe_multi: queue_name
         return queue_obj.bind( fanout_exchange(queue_name) ).subscribe do |delivery_info, properties, payload|
           block.call(JSON.parse(payload, symbolize_names: true))
         end

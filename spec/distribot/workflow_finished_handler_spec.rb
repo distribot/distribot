@@ -43,7 +43,7 @@ describe Distribot::WorkflowFinishedHandler do
           expect(Distribot::Workflow).to receive(:find).with(@workflow_id){ @workflow }
         end
         it 'sends a message to that queue' do
-          expect(Distribot).to receive(:publish!).with(@queue_name, {workflow_id: @workflow_id}.to_json)
+          expect(Distribot).to receive(:publish!).with(@queue_name, {workflow_id: @workflow_id})
           described_class.new.callback(workflow_id: @workflow_id)
         end
       end

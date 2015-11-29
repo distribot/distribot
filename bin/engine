@@ -23,6 +23,11 @@ module Example
         {
           name: 'start',
           is_initial: true,
+          transitions_to: 'working'
+        },
+        {
+          name: 'working',
+          handlers: ['SimpleWorker'],
           transitions_to: 'finish'
         },
         {

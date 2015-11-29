@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'distribot'
+require 'byebug'
+require 'pp'
+require 'active_support/core_ext/object'
+require 'active_support/core_ext/array'
+require 'active_support/json'
+
+
+Distribot.configure do |config|
+  config.redis_url = 'redis://172.17.0.2:6379/0'
+  config.rabbitmq_url = 'amqp://distribot:distribot@172.17.0.2:5672'
+end
+
+class SimpleWorker
+  include Distribot::Worker
+  enumerate_with :enumerate
+  process_tasks_with :process
+
+  def enumerate(context, &callback)
+    jobs = (0..100).to_a
+    callback.call( jobs )
+  end
+
+  def process(job)
+    puts "Processing job '#{job}'"
+  end
+end
+
+puts SimpleWorker.new
+
+sleep
