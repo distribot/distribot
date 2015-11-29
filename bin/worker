@@ -24,9 +24,8 @@ class SimpleWorker
     callback.call( jobs )
   end
 
-  def process(job)
+  def process(context, job)
     puts "Processing job '#{job}'"
-sleep 0.4
   end
 end
 

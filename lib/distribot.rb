@@ -10,6 +10,8 @@ require 'distribot/handler'
 require 'distribot/workflow_created_handler'
 require 'distribot/phase_started_handler'
 require 'distribot/worker'
+require 'distribot/task_finished_handler'
+require 'distribot/handler_finished_handler'
 require 'distribot/phase_finished_handler'
 require 'distribot/workflow_finished_handler'
 

@@ -20,14 +20,22 @@ module Distribot
           task_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
           finished_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.finished"
           Distribot.publish! enumerate_queue, {
+            workflow_id: workflow.id,
+            phase: phase.name,
             task_queue: task_queue
           }
           Distribot.broadcast! process_queue, {
+            workflow_id: workflow.id,
+            phase: phase.name,
             task_queue: task_queue,
             finished_queue: finished_queue
           }
           Distribot.publish! 'distribot.workflow.await-finished-tasks', {
-            finished_queue: finished_queue
+            workflow_id: workflow.id,
+            phase: phase.name,
+            finished_queue: finished_queue,
+            task_queue: task_queue,
+            handler: handler
           }
         end
       end

@@ -25,7 +25,8 @@ module Distribot
 
         def initialize
           Distribot.subscribe( self.class.enumeration_queue ) do |message|
-            self.send self.class.enumerator, message do |tasks|
+            context = OpenStruct.new(message)
+            self.send(self.class.enumerator, context) do |tasks|
               task_queue = message[:task_queue]
               Distribot.redis.incrby task_queue, tasks.count
               tasks.each do |task|
@@ -38,8 +39,16 @@ pp "TASK(#{task})"
           Distribot.subscribe_multi( self.class.process_queue ) do |message|
 pp process_queue: self.class.process_queue, message: message
             Distribot.subscribe(message[:task_queue]) do |task|
-              self.send(self.class.processor, task)
-              Distribot.publish! message[:finished_queue], {yay: Time.now.to_f}
+              context = OpenStruct.new(
+                workflow_id: message[:workflow_id],
+                phase: message[:phase],
+              )
+              self.send(self.class.processor, context, task)
+              Distribot.publish! message[:finished_queue], {
+                workflow_id: message[:workflow_id],
+                phase: message[:phase],
+                handler: self.class
+              }
             end
           end
         end

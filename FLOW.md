@@ -1,10 +1,10 @@
 
-
+∆
 * **subscribe:** `distribot.workflow.created`($workflow)
   * **publish:** `distribot.workflow.phase.started`($workflow, $workflow.first_phase)`
 
 ----
-
+∆
 * **subscribe:** `distribot.workflow.phase.started`($workflow, $phase)
   * With handlers:
 ```ruby
@@ -13,7 +13,7 @@
         $finished_queue = `distribot.workflow.$id.$phase.$handler.finished`
         **publish:** `distribot.workflow.handler.$handler.enumerate`($task_queue)
         **broadcast:** `distribot.workflow.handler.$handler.process`($task_queue, $finished_queue)
-        **publish:** `distribot.workflow.await-finished-tasks`($finished_queue)
+        **publish:** `distribot.workflow.await-finished-tasks`($task_queue)
       end
 ```
   * No handlers:
@@ -35,6 +35,7 @@
     * decrement counter in redis.
     * if counter <= 0
       * **publish:** `distribot.workflow.handler.finished`($workflow, $phase, $handler)
+      * cancel consumer of the $finished_queue
 
 ----
 

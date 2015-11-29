@@ -16,13 +16,13 @@ puts ">>>>>>>>>>>>>>>>>>>> WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!
       end
       # TODO: mark this workflow as 'finished'
       # Maybe via Sidekiq.
-#       if ENV.has_key? 'MAX_WORKFLOWS'
-#         if @@total < @@max
-#           Distribot::Workflow.create!(workflow.send(:to_hash).except(:id).merge(name: "Workflow ##{@@total + 1}"))
-# #          Distribot::Workflow.create!(workflow.send(:to_hash).except(:id).merge(name: "Workflow ##{@@total + 2}"))
-#           @@total += 1
-#         end
-#       end
+      if ENV.has_key? 'MAX_WORKFLOWS'
+        if @@total < @@max
+          Distribot::Workflow.create!(workflow.send(:to_hash).except(:id).merge(name: "Workflow ##{@@total + 1}"))
+          Distribot::Workflow.create!(workflow.send(:to_hash).except(:id).merge(name: "Workflow ##{@@total + 2}"))
+          @@total += 1
+        end
+      end
     end
   end
 end

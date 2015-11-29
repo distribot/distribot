@@ -24,7 +24,7 @@ distribot:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "./provision_vm.sh && tail -f /dev/null"
+  command: bash -c "tail -f /dev/null"
 
 worker:
   image: distribot/dev
@@ -38,4 +38,4 @@ worker:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "./provision_vm.sh && tail -f /dev/null"
+  command: bash -c "tail -f /dev/null"
