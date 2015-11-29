@@ -35,7 +35,11 @@ module Distribot
           end
 
           Distribot.subscribe_multi( self.class.process_queue ) do |message|
-            self.send(self.class.processor, message)
+pp process_queue: self.class.process_queue, message: message
+            Distribot.subscribe(message[:task_queue]) do |task|
+              self.send(self.class.processor, task)
+              Distribot.publish! message[:finished_queue], {yay: Time.now.to_i}
+            end
           end
         end
 

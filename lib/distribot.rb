@@ -111,31 +111,17 @@ pp subscribe: queue_name
   end
 
   def self.subscribe_multi(queue_name, &block)
-    queue_obj = queue(queue_name)
-    while true
-      begin
-pp subscribe_multi: queue_name
-        return queue_obj.bind( fanout_exchange(queue_name) ).subscribe do |delivery_info, properties, payload|
-          block.call(JSON.parse(payload, symbolize_names: true))
-        end
-        break
-      rescue StandardError => e
-        puts "ERROR----------------------------: #{e} --- #{e.backtrace.join("\n")}"
-        sleep 0.1
-      end
+    my_queue = bunny_channel.queue(queue_name)
+    exchange = bunny_channel.fanout('distribot.fanout')
+    my_queue.bind(exchange).subscribe do |delivery_info, properties, payload|
+      block.call(JSON.parse(payload, symbolize_names: true))
     end
   end
 
   def self.broadcast!(queue_name, data)
-pp broadcast: queue_name, data: data
-    while true do
-      begin
-        queue_obj = queue(queue_name)
-        fanout_exchange(queue_name).publish data.to_json, routing_key: queue_obj.name
-        break
-      rescue StandardError => e
-        puts "ERROR in broadcast! #{e} --- #{e.backtrace.join("\n")}"
-      end
-    end
+    ch = bunny.create_channel
+    x = ch.fanout('distribot.fanout')
+    x.publish(data.to_json, routing_key: queue_name)
   end
+
 end
