@@ -29,6 +29,7 @@ module Distribot
               task_queue = message[:task_queue]
               Distribot.redis.incrby task_queue, tasks.count
               tasks.each do |task|
+pp "TASK(#{task})"
                 Distribot.publish! task_queue, task
               end
             end
@@ -38,7 +39,7 @@ module Distribot
 pp process_queue: self.class.process_queue, message: message
             Distribot.subscribe(message[:task_queue]) do |task|
               self.send(self.class.processor, task)
-              Distribot.publish! message[:finished_queue], {yay: Time.now.to_i}
+              Distribot.publish! message[:finished_queue], {yay: Time.now.to_f}
             end
           end
         end

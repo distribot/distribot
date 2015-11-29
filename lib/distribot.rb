@@ -69,12 +69,14 @@ module Distribot
   end
 
   def self.queue(name)
+    @@queues ||= { }
+    return @@queues[name] if @@queues[name]
     failed = false
     while true do
       begin
         queue = bunny_channel.queue(name, auto_delete: true, durable: true)
 warn "SUCCEEDED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" if failed
-        return queue
+        return @@queues[name] = queue
       rescue StandardError => e
 puts "FAILED..."
         failed = true
@@ -98,29 +100,35 @@ pp publish: queue_name, data: data
     end
   end
 
-  def self.fanout_exchange(name)
-    @@fanouts[name||''] ||= bunny.create_channel.fanout(name || '')
+  def self.fanout_exchange
+    @@fanout ||= bunny.create_channel.fanout('distribot.fanout')
   end
 
   def self.subscribe(queue_name, &block)
 pp subscribe: queue_name
-    queue_obj = queue(queue_name)
-    queue_obj.subscribe do |delivery_info, properties, payload|
+#sleep 0.2
+    ch = bunny_channel
+    ch.prefetch(1)
+    queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
+    queue_obj.subscribe(manual_ack: true) do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))
+      ch.acknowledge(delivery_info.delivery_tag, false)
     end
   end
 
   def self.subscribe_multi(queue_name, &block)
-    my_queue = bunny_channel.queue(queue_name)
-    exchange = bunny_channel.fanout('distribot.fanout')
-    my_queue.bind(exchange).subscribe do |delivery_info, properties, payload|
+#sleep 0.2
+    ch = bunny_channel
+    my_queue = ch.queue('', exclusive: true)
+    ch.fanout('distribot.fanout')
+    my_queue.bind(fanout_exchange).subscribe do |delivery_info, properties, payload|
+pp subscribe_multi: payload
       block.call(JSON.parse(payload, symbolize_names: true))
     end
   end
 
   def self.broadcast!(queue_name, data)
-    ch = bunny.create_channel
-    x = ch.fanout('distribot.fanout')
+    x = bunny_channel.fanout('distribot.fanout')
     x.publish(data.to_json, routing_key: queue_name)
   end
 

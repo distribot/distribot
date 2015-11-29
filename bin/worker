@@ -26,6 +26,7 @@ class SimpleWorker
 
   def process(job)
     puts "Processing job '#{job}'"
+sleep 0.4
   end
 end
 
