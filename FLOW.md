@@ -5,15 +5,6 @@
 
 ----
 
-* **subscribe:** `distribot.workflow.handler.started`($handler)
-  * call out to enumerate the jobs:
-    * **publish:** `distribot.workflow.handler.enumerate`
-      * $workflow, $phase, $handler
-  * call out to start working on the jobs:
-    * **broadcast:** `distribot.workflow.handler.start`($workflow, $phase, $handler, $task_queue)
-
-----
-
 * **subscribe:** `distribot.workflow.phase.started`($workflow, $phase)
   * No handlers:
 ```ruby
@@ -27,6 +18,15 @@
 ```
   * With handlers:
     * **publish:** `distribot.workflow.phase.finished`
+
+----
+
+* **subscribe:** `distribot.workflow.handler.started`($handler)
+  * call out to enumerate the jobs:
+    * **publish:** `distribot.workflow.handler.enumerate`
+      * $workflow, $phase, $handler
+  * call out to start working on the jobs:
+    * **broadcast:** `distribot.workflow.handler.start`($workflow, $phase, $handler, $task_queue)
 
 ----
 
