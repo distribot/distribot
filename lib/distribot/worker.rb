@@ -34,6 +34,14 @@ pp "TASK(#{task})"
                 Distribot.publish! task_queue, task
               end
             end
+
+            Distribot.publish! 'distribot.workflow.handler.enumerated', {
+              workflow_id: message[:workflow_id],
+              phase: message[:phase],
+              task_queue: message[:task_queue],
+              finished_queue: message[:finished_queue],
+              handler: message[:handler]
+            }
           end
 
           Distribot.subscribe_multi( self.class.process_queue ) do |message|

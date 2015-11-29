@@ -13,7 +13,6 @@
         $finished_queue = `distribot.workflow.$id.$phase.$handler.finished`
         **publish:** `distribot.workflow.handler.$handler.enumerate`($task_queue)
         **broadcast:** `distribot.workflow.handler.$handler.process`($task_queue, $finished_queue)
-        **publish:** `distribot.workflow.await-finished-tasks`($task_queue)
       end
 ```
   * No handlers:
@@ -30,7 +29,7 @@
 
 ----
 
-* **subscribe:** `distribot.workflow.await-finished-tasks`($finished_queue)
+* **subscribe:** `distribot.workflow.handler.enumerated`($workflow, $phase, $handler, $task_queue)
   * **subscribe:** $finished_queue
     * decrement counter in redis.
     * if counter <= 0
@@ -49,7 +48,7 @@
 
 * **subscribe:** `distribot.workflow.handler.$handler.enumerate`($task_queue)
   * $handler.enumerate.map{|x| $task_queue.insert(x) }
-  * **broadcast:** `distribot.workflow.handler.enumerated`($workflow, $phase, $handler)
+  * **broadcast:** `distribot.workflow.handler.enumerated`($workflow, $phase, $handler, $task_queue)
 
 ----
 

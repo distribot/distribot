@@ -25,4 +25,8 @@ sudo rabbitmqctl set_permissions -p / $RABBITMQ_USERNAME ".*" ".*" ".*"
 
 sudo service rabbitmq-server restart
 sudo service redis-server restart
+
+# Delete all the distribot queues:
+sudo rabbitmqctl list_queues | grep distribot | awk '{print $1}' | xargs -I qn rabbitmqadmin delete queue name=qn
+
 echo "Infra ready..."

@@ -49,11 +49,11 @@ workflow_finished = Distribot::WorkflowFinishedHandler.new
 
 Distribot::WorkflowCreatedHandler.new
 
+puts "<ENTER> to create a workflow:"
 @count = 1
 while gets do
-  puts "<ENTER> to create a workflow:"
   @count += 1
-  Example.make_workflow "INIT"
+  Example.make_workflow "INIT: #{@count}"
 end
 
 

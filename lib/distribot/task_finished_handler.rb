@@ -3,12 +3,16 @@ module Distribot
 
   class TaskFinishedHandler
     include Distribot::Handler
-    subscribe_to 'distribot.workflow.await-finished-tasks', handler: :callback
+    subscribe_to 'distribot.workflow.handler.enumerated', handler: :callback
 
     def callback(message)
-      Distribot.subscribe(message[:finished_queue]) do |task_info|
-        handle_task_finished(message, task_info)
-      end
+#      if Distribot.queue_exists?( message[:finished_queue] )
+        Distribot.subscribe(message[:finished_queue]) do |task_info|
+          handle_task_finished(message, task_info)
+        end
+#      else
+#        puts "QUEUE DOESNT EXIST YET !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+#      end
     end
 
     def handle_task_finished(message, task_info)
@@ -16,6 +20,7 @@ module Distribot
       current_value = Distribot.redis.get(task_counter)
       unless current_value.nil?
         new_value = Distribot.redis.decr task_counter
+puts "DECR: #{current_value} -> #{new_value}"
         if new_value.to_i <= 0
           Distribot.publish! 'distribot.workflow.handler.finished', {
             workflow_id: message[:workflow_id],

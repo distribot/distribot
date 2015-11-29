@@ -6,7 +6,7 @@ describe Distribot::TaskFinishedHandler do
   end
   describe 'definition' do
     it 'subscribes to the correct queue' do
-      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.await-finished-tasks'
+      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.handler.enumerated'
     end
     it 'declares a valid handler' do
       expect(Distribot::Handler.handler_for(described_class)).to eq :callback

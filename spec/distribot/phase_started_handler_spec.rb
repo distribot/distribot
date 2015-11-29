@@ -42,7 +42,7 @@ describe Distribot::PhaseStartedHandler do
       context 'some handlers' do
         before do
           @workflow = Distribot::Workflow.new(
-            id: 1,
+            id: SecureRandom.uuid,
             name: 'test',
             phases: [{
               name: 'phase1',
@@ -50,22 +50,24 @@ describe Distribot::PhaseStartedHandler do
               handlers: ['FooHandler']
             }]
           )
-          expect(Distribot::Workflow).to receive(:find).with(1){ @workflow }
+          expect(Distribot::Workflow).to receive(:find).with(@workflow.id){ @workflow }
 
           enumerate_queue = 'distribot.workflow.handler.FooHandler.enumerate'
           process_queue = 'distribot.workflow.handler.FooHandler.process'
-          task_queue = 'distribot.workflow.1.phase1.FooHandler.tasks'
-          finished_queue = 'distribot.workflow.1.phase1.FooHandler.finished'
+          task_queue = 'distribot.workflow.' + @workflow.id + '.phase1.FooHandler.tasks'
+          finished_queue = 'distribot.workflow.' + @workflow.id + '.phase1.FooHandler.finished'
 
           expect(Distribot).to receive(:publish!).with(enumerate_queue, {
-            task_queue: task_queue
+            task_queue: task_queue,
+            workflow_id: @workflow.id,
+            phase: 'phase1',
+
           })
           expect(Distribot).to receive(:broadcast!).with(process_queue, {
             task_queue: task_queue,
-            finished_queue: finished_queue
-          })
-          expect(Distribot).to receive(:publish!).with('distribot.workflow.await-finished-tasks', {
-            finished_queue: finished_queue
+            finished_queue: finished_queue,
+            phase: 'phase1',
+            workflow_id: @workflow.id
           })
         end
         it 'publishes and broadcasts to the correct queues with the correct params' do

@@ -110,7 +110,7 @@ pp publish: queue_name, data: data
 pp subscribe: queue_name
 #sleep 0.2
     ch = bunny_channel
-    ch.prefetch(1)
+#    ch.prefetch(1)
     queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
     queue_obj.subscribe(manual_ack: true) do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))
