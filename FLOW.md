@@ -1,9 +1,9 @@
 
 
-**subscribe:** distribot.workflow.created($workflow)
-  **publish:** distribot.workflow.phase.started($workflow, $workflow.first_phase)
+* **subscribe:** distribot.workflow.created($workflow)
+  * **publish:** distribot.workflow.phase.started($workflow, $workflow.first_phase)
 
-**subscribe:** distribot.workflow.handler.started($handler)
+* **subscribe:** distribot.workflow.handler.started($handler)
   * call out to enumerate the jobs:
     * **publish:** distribot.workflow.handler.enumerate
       * $workflow, $phase, $handler
@@ -11,7 +11,7 @@
     * **broadcast:** distribot.workflow.handler.start($workflow, $phase, $handler, $task_queue)
 
 
-**subscribe:** distribot.workflow.phase.started($workflow, $phase)
+* **subscribe:** distribot.workflow.phase.started($workflow, $phase)
   * handlers?
     * yes:
 ```ruby
@@ -26,31 +26,31 @@
     * no handlers:
       * **publish:** distribot.workflow.phase.finished
 
-**subscribe:** distribot.workflow.await-finished-tasks($finished_queue)
-  **subscribe:** $finished_queue
+* **subscribe:** distribot.workflow.await-finished-tasks($finished_queue)
+  * **subscribe:** $finished_queue
     * decrement counter in redis.
     * if counter <= 0
       * **publish:** distribot.workflow.handler.finished($workflow, $phase, $handler)
 
-**subscribe:** distribot.workflow.phase.started($finished_queue)
+* **subscribe:** distribot.workflow.phase.started($finished_queue)
   * @consumer = **subscribe:** $finished_queue
     * mark $task as complete in the $finished_counter
   * **subscribe_multi:** distribot.workflow.phase.finished($finished_queue)
     * delete matching @consumer for $finished_queue
 
-**subscribe:** distribot.workflow.handler.$handler.enumerate($task_queue)
+* **subscribe:** distribot.workflow.handler.$handler.enumerate($task_queue)
   * $handler.enumerate.map{|x| $task_queue.insert(x) }
   * **broadcast:** distribot.workflow.handler.enumerated($workflow, $phase, $handler)
 
-**subscribe_multi:** distribot.workflow.handler.$handler.process($task_queue)
+* **subscribe_multi:** distribot.workflow.handler.$handler.process($task_queue)
   * pull from $task_queue
   * publish to $finished_queue
 
-**subscribe:** distribot.workflow.handler.finished($workflow, $phase, $handler)
+* **subscribe:** distribot.workflow.handler.finished($workflow, $phase, $handler)
   * if all the handlers in this phase have finished:
     * **publish:** distribot.workflow.phase.finished($workflow, $phase)
 
-**subscribe:** distribot.workflow.phase.finished($workflow, $phase)
+* **subscribe:** distribot.workflow.phase.finished($workflow, $phase)
 ```ruby
   if $workflow.phase == $phase
     if $workflow.next_phase?
