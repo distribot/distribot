@@ -2,11 +2,7 @@ require 'spec_helper'
 
 describe Distribot::WorkflowCreatedHandler do
   before :each do
-    Distribot.stub(:queue) do
-      queue = double('queue')
-      queue.stub(:subscribe)
-      queue
-    end
+    Distribot.stub(:subscribe)
     Distribot.stub(:publish!)
     Distribot.stub(:redis) do
       redis = double('redis')

@@ -8,13 +8,6 @@ require 'distribot/workflow'
 require 'distribot/phase'
 require 'distribot/handler'
 require 'distribot/workflow_created_handler'
-require 'distribot/phase_enqueued_handler'
-require 'distribot/phase_started_handler'
-require 'distribot/task_finished_handler'
-require 'distribot/handler_runner'
-require 'distribot/handler_finished_handler'
-require 'distribot/handler_consumer_canceler'
-require 'distribot/phase_finished_handler'
 require 'distribot/workflow_finished_handler'
 
 module Distribot
@@ -73,7 +66,7 @@ module Distribot
   end
 
   def self.queue(name)
-failed = false
+    failed = false
     while true do
       begin
         queue = bunny_channel.queue(name, auto_delete: true, durable: true)
@@ -81,8 +74,7 @@ warn "SUCCEEDED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" if fai
         return queue
       rescue StandardError => e
 puts "FAILED..."
-failed = true
-#puts "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+        failed = true
         sleep 0.1
         next
       end
@@ -107,12 +99,19 @@ pp publish: queue_name, json: json
     @@fanouts[name||''] ||= bunny.create_channel.fanout(name || '')
   end
 
+  def self.subscribe(queue_name, &block)
+    queue_obj = queue(queue_name)
+    queue_obj.subscribe do |delivery_info, properties, payload|
+      block.call(JSON.parse(payload, symbolize_names: true))
+    end
+  end
+
   def self.subscribe_multi(queue_name, &block)
     queue_obj = queue(queue_name)
     while true
       begin
         return queue_obj.bind( fanout_exchange(queue_name) ).subscribe do |delivery_info, properties, payload|
-          block.call(delivery_info, properties, payload)
+          block.call(JSON.parse(payload, symbolize_names: true))
         end
         break
       rescue StandardError => e

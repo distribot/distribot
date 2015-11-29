@@ -25,17 +25,14 @@ module Distribot
           self.queue_name = @@queues[self.class]
           if @@fanouts.include? self.class
 puts "#{self}.subscribe_multi(#{self.queue_name})"
-            Distribot.subscribe_multi(self.queue_name) do |_, _, payload|
-puts "#{self.class}.received_multi(#{self.queue_name}, #{payload})"
-              message = JSON.parse(payload, symbolize_names: true)
+            Distribot.subscribe_multi(self.queue_name) do |message|
+puts "#{self.class}.received_multi(#{self.queue_name}, #{message})"
               self.send(@@handlers[self.class], message)
             end
           else
 puts "#{self}.subscribe(#{self.queue_name})"
-            Distribot.queue(self.queue_name).subscribe do |_, _, payload|
-
-puts "#{self.class}.received(#{self.queue_name}, #{payload})"
-              message = JSON.parse(payload, symbolize_names: true)
+            Distribot.subscribe(self.queue_name) do |message|
+puts "#{self.class}.received(#{self.queue_name}, #{message})"
               self.send(@@handlers[self.class], message)
             end
           end
