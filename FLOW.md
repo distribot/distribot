@@ -12,8 +12,7 @@
 
 
 * **subscribe:** `distribot.workflow.phase.started`($workflow, $phase)
-  * handlers?
-    * yes:
+  * No handlers:
 ```ruby
       phase.handlers.each do |handler|
         $task_queue = `distribot.workflow.$id.$phase.$handler.tasks`
@@ -23,8 +22,8 @@
         **publish:** `distribot.workflow.await-finished-tasks`($finished_queue)
       end
 ```
-    * no handlers:
-      * **publish:** `distribot.workflow.phase.finished`
+  * With handlers:
+    * **publish:** `distribot.workflow.phase.finished`
 
 * **subscribe:** `distribot.workflow.await-finished-tasks`($finished_queue)
   * **subscribe:** $finished_queue
