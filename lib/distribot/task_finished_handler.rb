@@ -7,7 +7,7 @@ module Distribot
     def initialize(workflow_id, queue_name, handler)
       workflow = Distribot::Workflow.find(workflow_id)
       counter_key = queue_name.gsub('.finished', '')
-      self.consumer = Distribot.queue(queue_name).subscribe do |_, _, payload|
+      self.consumer = Distribot.subscribe_multi(queue_name) do |_, _, payload|
         Distribot.redis.decr counter_key
         if Distribot.redis.get(counter_key).to_i <= 0
           Distribot.publish! 'distribot.workflow.handler.finished', {

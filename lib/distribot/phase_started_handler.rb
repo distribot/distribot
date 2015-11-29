@@ -15,30 +15,14 @@ module Distribot
           phase: phase.name
         }.to_json
       else
-        queue_counts = phase.handlers.map do |handler|
-
+        phase.handlers.map do |handler|
           queue_name = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
-
           # Announce that we need some workers to listen to the task queue:
-          Distribot.publish! 'distribot.workflow.handler.start', {
+          Distribot.broadcast! 'distribot.workflow.handler.started', {
             handler: handler,
+            workflow_id: workflow.id,
             queue_name: queue_name
           }.to_json
-
-          # Insert these jobs into the handler's queue:
-          job_count = 0
-          context = OpenStruct.new(phase: phase.name, workflow_id: workflow.id)
-          Kernel.const_get(handler).enumerate_jobs(context, workflow) do |jobs|
-            Distribot.redis.incrby queue_name, jobs.count
-puts "INCREMENTED '#{queue_name}' by #{jobs.count}"
-            jobs.each{|job| Distribot.publish! queue_name, job.to_json }
-          end
-          { queue_name: queue_name, handler: handler }
-        end
-
-        queue_counts.each do |message|
-puts "Phase Enqueued! #{phase.name}"
-          Distribot.publish! 'distribot.workflow.phase.enqueued', message.merge(workflow_id: workflow.id).to_json
         end
       end
     end

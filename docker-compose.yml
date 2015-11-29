@@ -1,4 +1,16 @@
 
+infra:
+  image: distribot/dev
+  volumes:
+    - ./:/var/www/distribot
+  environment:
+    - TERM=xterm
+  working_dir: /var/www/distribot
+  command: bash -c "echo 'bind 0.0.0.0' | sudo tee -a /etc/redis/redis.conf && sudo service redis-server restart && sudo service rabbitmq-server restart && bash ./perms.sh && tail -f /dev/null"
+  ports:
+    - 5672
+    - 15672
+    - 6379
 
 distribot:
   image: distribot/dev
@@ -8,8 +20,22 @@ distribot:
     - ./:/var/www/distribot
   environment:
     - TERM=xterm
+    - INFRA_HOST=infra_1
   working_dir: /var/www/distribot
+  links:
+    - infra
   command: bash -c "./provision_vm.sh && tail -f /dev/null"
-  ports:
-    - 443
-    - 15672
+
+worker:
+  image: distribot/dev
+  # build: .
+  # dockerfile: ./Dockerfile
+  volumes:
+    - ./:/var/www/distribot
+  environment:
+    - TERM=xterm
+    - INFRA_HOST=infra_1
+  working_dir: /var/www/distribot
+  links:
+    - infra
+  command: bash -c "./provision_vm.sh && tail -f /dev/null"

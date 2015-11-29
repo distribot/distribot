@@ -21,6 +21,7 @@ module Distribot
 
   @@config = OpenStruct.new()
   @@did_configure = false
+  @@fanouts = { }
 
   def self.configure(&block)
     @@did_configure = true
@@ -55,8 +56,8 @@ module Distribot
   end
 
   def self.redis
-    # Redis complains if we pass it a nill url. Better to not pass a url at all:
-    @@redis ||= configuration.redis_url ? Redis.new( configuration.redis_url ) : Redis.new
+    # Redis complains if we pass it a nil url. Better to not pass a url at all:
+    @@redis ||= configuration.redis_url ? Redis.new( url: configuration.redis_url ) : Redis.new
   end
 
   def self.debug=(value)
@@ -72,27 +73,50 @@ module Distribot
   end
 
   def self.queue(name)
-    bunny_channel.queue(name, auto_delete: true, durable: true)
+failed = false
+    while true do
+      begin
+        queue = bunny_channel.queue(name, auto_delete: true, durable: true)
+warn "SUCCEEDED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" if failed
+        return queue
+      rescue StandardError => e
+puts "FAILED..."
+failed = true
+#puts "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+        sleep 0.1
+        next
+      end
+    end
   end
 
   def self.publish!(queue_name, json)
+pp publish: queue_name, json: json
+begin
     queue_obj = queue(queue_name)
     bunny_channel.default_exchange.publish json, routing_key: queue_obj.name
+rescue StandardError => e
+puts "ERROR in publish! #{e} --- #{e.backtrace.join("\n")}"
+end
   end
 
-  def self.fanout_exchange
-    @@fanout ||= bunny.create_channel.fanout('yay')
+  def self.fanout_exchange(name)
+    @@fanouts[name||''] ||= bunny.create_channel.fanout(name || '')
   end
 
   def self.subscribe_multi(queue_name, &block)
     queue_obj = queue(queue_name)
-    queue_obj.bind( fanout_exchange ).subscribe do |delivery_info, properties, payload|
+    queue_obj.bind( fanout_exchange(queue_name) ).subscribe do |delivery_info, properties, payload|
       block.call(delivery_info, properties, payload)
     end
   end
 
   def self.broadcast!(queue_name, json)
+pp broadcast: queue_name, json: json
+begin
     queue_obj = queue(queue_name)
-    fanout_exchange.publish json, routing_key: queue_obj.name
+    fanout_exchange(queue_name).publish json, routing_key: queue_obj.name
+rescue StandardError => e
+puts "ERROR in broadcast! #{e} --- #{e.backtrace.join("\n")}"
+end
   end
 end
