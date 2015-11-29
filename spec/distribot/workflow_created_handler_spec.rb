@@ -15,7 +15,7 @@ describe Distribot::WorkflowCreatedHandler do
     end
   end
   describe 'definition' do
-    it 'subscribes to the distribot.workflow.created queue' do
+    it 'subscribes to the correct queue' do
       expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.created'
     end
     it 'declares a valid handler' do
