@@ -8,6 +8,7 @@ require 'distribot/workflow'
 require 'distribot/phase'
 require 'distribot/handler'
 require 'distribot/workflow_created_handler'
+require 'distribot/phase_started_handler'
 require 'distribot/workflow_finished_handler'
 
 module Distribot
@@ -81,12 +82,12 @@ puts "FAILED..."
     end
   end
 
-  def self.publish!(queue_name, json)
-pp publish: queue_name, json: json
+  def self.publish!(queue_name, data)
+pp publish: queue_name, data: data
     while true do
       begin
         queue_obj = queue(queue_name)
-        bunny_channel.default_exchange.publish json, routing_key: queue_obj.name
+        bunny_channel.default_exchange.publish data.to_json, routing_key: queue_obj.name
         break
       rescue StandardError => e
         puts "ERROR in publish! #{e} --- #{e.backtrace.join("\n")}"
@@ -121,12 +122,12 @@ pp publish: queue_name, json: json
     end
   end
 
-  def self.broadcast!(queue_name, json)
-pp broadcast: queue_name, json: json
+  def self.broadcast!(queue_name, data)
+pp broadcast: queue_name, data: data
     while true do
       begin
         queue_obj = queue(queue_name)
-        fanout_exchange(queue_name).publish json, routing_key: queue_obj.name
+        fanout_exchange(queue_name).publish data.to_json, routing_key: queue_obj.name
         break
       rescue StandardError => e
         puts "ERROR in broadcast! #{e} --- #{e.backtrace.join("\n")}"
