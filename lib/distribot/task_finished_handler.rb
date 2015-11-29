@@ -22,7 +22,7 @@ module Distribot
 
     def cancel(queue_name)
 #puts "Cancelling consumer of #{queue_name}"
-      self.consumer.cancel
+      self.consumer.cancel rescue nil
     end
   end
 

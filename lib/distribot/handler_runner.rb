@@ -4,7 +4,7 @@ module Distribot
   class HandlerRunner
     include Distribot::Handler
     @@consumers = [ ]
-    subscribe_to 'distribot.workflow.handler.started', fanout: true, handler: :callback
+    subscribe_to 'distribot.workflow.handler.started', handler: :callback
 
     def callback(message)
 pp message: message
@@ -49,7 +49,10 @@ pp finished: finished_queue
     end
 
     def self.cancel_consumers_for(queue_name)
-      @@consumers.select{|consumer| consumer.queue.name == queue_name}.map{|consumer| puts "Cancelling consumer of #{consumer.queue.name}".upcase; consumer}.map(&:cancel)
+      @@consumers.select{|consumer| consumer.queue.name == queue_name}.map do |consumer|
+        puts "Cancelling consumer of #{consumer.queue.name}".upcase
+        consumer
+      end.map(&:cancel)
       @@consumers = @@consumers.delete_if{|x| x.queue.name == queue_name}
     end
   end

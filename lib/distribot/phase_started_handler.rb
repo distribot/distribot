@@ -18,7 +18,7 @@ module Distribot
         phase.handlers.map do |handler|
           queue_name = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
           # Announce that we need some workers to listen to the task queue:
-          Distribot.broadcast! 'distribot.workflow.handler.started', {
+          Distribot.publish! 'distribot.workflow.handler.started', {
             handler: handler,
             workflow_id: workflow.id,
             queue_name: queue_name

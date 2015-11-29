@@ -91,12 +91,16 @@ failed = true
 
   def self.publish!(queue_name, json)
 pp publish: queue_name, json: json
-begin
-    queue_obj = queue(queue_name)
-    bunny_channel.default_exchange.publish json, routing_key: queue_obj.name
-rescue StandardError => e
-puts "ERROR in publish! #{e} --- #{e.backtrace.join("\n")}"
-end
+    while true do
+      begin
+        queue_obj = queue(queue_name)
+        bunny_channel.default_exchange.publish json, routing_key: queue_obj.name
+        break
+      rescue StandardError => e
+        puts "ERROR in publish! #{e} --- #{e.backtrace.join("\n")}"
+        sleep 0.1
+      end
+    end
   end
 
   def self.fanout_exchange(name)
@@ -105,18 +109,29 @@ end
 
   def self.subscribe_multi(queue_name, &block)
     queue_obj = queue(queue_name)
-    queue_obj.bind( fanout_exchange(queue_name) ).subscribe do |delivery_info, properties, payload|
-      block.call(delivery_info, properties, payload)
+    while true
+      begin
+        return queue_obj.bind( fanout_exchange(queue_name) ).subscribe do |delivery_info, properties, payload|
+          block.call(delivery_info, properties, payload)
+        end
+        break
+      rescue StandardError => e
+        puts "ERROR----------------------------: #{e} --- #{e.backtrace.join("\n")}"
+        sleep 0.1
+      end
     end
   end
 
   def self.broadcast!(queue_name, json)
 pp broadcast: queue_name, json: json
-begin
-    queue_obj = queue(queue_name)
-    fanout_exchange(queue_name).publish json, routing_key: queue_obj.name
-rescue StandardError => e
-puts "ERROR in broadcast! #{e} --- #{e.backtrace.join("\n")}"
-end
+    while true do
+      begin
+        queue_obj = queue(queue_name)
+        fanout_exchange(queue_name).publish json, routing_key: queue_obj.name
+        break
+      rescue StandardError => e
+        puts "ERROR in broadcast! #{e} --- #{e.backtrace.join("\n")}"
+      end
+    end
   end
 end
