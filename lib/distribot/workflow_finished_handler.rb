@@ -12,7 +12,7 @@ puts ">>>>>>>>>>>>>>>>>>>> WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!
       if Distribot.queue_exists?("distribot.workflow.#{workflow.id}.finished")
         Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
           workflow_id: workflow.id
-        }.to_json
+        }
       end
       # TODO: mark this workflow as 'finished'
       # Maybe via Sidekiq.

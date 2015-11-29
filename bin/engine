@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'distribot'
+require 'byebug'
+require 'pp'
+require 'active_support/core_ext/object'
+require 'active_support/core_ext/array'
+require 'active_support/json'
+
+
+Distribot.configure do |config|
+  config.redis_url = 'redis://172.17.0.2:6379/0'
+  config.rabbitmq_url = 'amqp://distribot:distribot@172.17.0.2:5672'
+end
+
+module Example
+  def self.make_workflow(name)
+    name += "#1"
+    @workflow = Distribot::Workflow.new(
+      name: name,
+      phases: [
+        {
+          name: 'start',
+          is_initial: true,
+          transitions_to: 'finish'
+        },
+        {
+          name: 'finish',
+          is_final: true
+        }
+      ]
+    )
+    @workflow.save!
+  end
+end
+
+phase_started = Distribot::PhaseStartedHandler.new
+phase_finished = Distribot::PhaseFinishedHandler.new
+workflow_finished = Distribot::WorkflowFinishedHandler.new
+
+Distribot::WorkflowCreatedHandler.new
+
+@count = 1
+while gets do
+  puts "<ENTER> to create a workflow:"
+  @count += 1
+  Example.make_workflow "Testy ##{@count}"
+end
+
+

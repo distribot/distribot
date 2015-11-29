@@ -28,13 +28,13 @@ module Distribot
 
       Distribot.publish! 'distribot.workflow.created', {
         workflow_id: self.id
-      }.to_json
+      }
       if is_new
         self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
         if block_given?
           finished_id = "distribot.workflow.#{self.id}.finished"
-          @consumer = Distribot.queue(finished_id).subscribe do |_, _, payload|
-            Distribot.redis.set(finished_id, payload)
+          @consumer = Distribot.subscribe(finished_id) do |message|
+            Distribot.redis.set(finished_id, message.to_json)
           end
           while true do
             sleep 1
@@ -77,7 +77,7 @@ module Distribot
       Distribot.publish! 'distribot.workflow.phase.started', {
         workflow_id: self.id,
         phase: phase
-      }.to_json
+      }
     end
 
     def add_transition(item)
