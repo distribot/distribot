@@ -14,6 +14,23 @@ puts ">>>>>>>>>>>>>>>>>>>> WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!
           workflow_id: workflow.id
         }
       end
+
+
+      workflow.phases.each do |phase|
+        phase.handlers.each do |handler|
+          task_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
+puts "CANCEL!!!! #{task_queue} !!!!"
+          Distribot.broadcast! 'distribot.cancel.consumer', {
+            id: SecureRandom.uuid,
+            type: 'cancel_consumer_queue',
+            workflow_id: message[:workflow_id],
+            phase: phase.name,
+            handler: handler,
+            task_queue: task_queue
+          }
+        end
+      end
+
       # TODO: mark this workflow as 'finished'
       # Maybe via Sidekiq.
       if ENV.has_key? 'MAX_WORKFLOWS'

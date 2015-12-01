@@ -47,7 +47,16 @@ module Distribot
 
   def self.bunny_channel
     unless defined? @@channel
-      bunny.start
+      while true do
+        begin
+          bunny.start
+          break
+        rescue StandardError => e
+          warn "Could not connect..retrying in 1 second..."
+          sleep 1
+          next
+        end
+      end
     end
     @@channel ||= bunny.create_channel
     @@channel
@@ -89,7 +98,6 @@ puts "FAILED..."
   end
 
   def self.publish!(queue_name, data)
-#pp publish: queue_name, data: data
     while true do
       begin
         queue_obj = queue(queue_name)
@@ -102,13 +110,10 @@ puts "FAILED..."
     end
   end
 
-  def self.fanout_exchange
-    @@fanout ||= bunny.create_channel.fanout('distribot.fanout')
-  end
-
   def self.subscribe(queue_name, options={}, &block)
+puts "SUBSCRIBE(#{queue_name})"
     ch = bunny_channel
-#    ch.prefetch(1)
+    ch.prefetch(1)
     queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
     queue_obj.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))
@@ -118,6 +123,7 @@ puts "FAILED..."
 
   def self.subscribe_multi(topic, &block)
     ch = bunny_channel
+    ch.prefetch(1)
     my_queue = ch.queue('', exclusive: true, auto_delete: true)
     x = ch.fanout("distribot.fanout.#{topic}")
     my_queue.bind(x).subscribe do |delivery_info, properties, payload|
@@ -128,7 +134,6 @@ puts "FAILED..."
   def self.broadcast!(topic, data)
     ch = bunny_channel
     x = ch.fanout("distribot.fanout.#{topic}")
-#puts "broadcast(#{topic}, #{data})"
     x.publish(data.to_json, routing_key: topic)
   end
 

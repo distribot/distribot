@@ -29,13 +29,10 @@ class SimpleWorker
   end
 
   def process(context, job)
-    puts "Processing job '#{context.workflow_id}.#{context.phase}.#{self.class} #{job[:args]}'"
-    sleep 1
+    puts "Processing job '#{context.workflow_id}.#{context.phase}.#{self} #{job[:args]}'"
+    sleep 0.1
   end
 end
 
-class AnotherWorker < SimpleWorker; end
-
-puts SimpleWorker.new
 
 sleep
