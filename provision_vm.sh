@@ -7,6 +7,10 @@ sudo apt-get -y autoremove
 sudo apt-get install -y ruby2.0 ruby2.0-dev build-essential git redis-server wget vim python
 sudo ln -sf /usr/bin/ruby2.0 /usr/bin/ruby && sudo ln -sf /usr/bin/gem2.0 /usr/bin/gem
 
+sudo cat <<EOF | sudo tee -a /etc/redis/redis.conf
+bind 0.0.0.0
+EOF
+
 sudo service redis-server restart
 
 if ! gem list | grep bundler; then

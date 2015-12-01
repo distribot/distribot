@@ -7,7 +7,6 @@ module Distribot
 
     def callback(message)
       workflow = Distribot::Workflow.find( message[:workflow_id] )
-puts "\n\nWORKFLOW #{workflow.name} STARTED!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n"
       workflow.transition_to! workflow.next_phase
     end
   end

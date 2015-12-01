@@ -21,9 +21,9 @@ module Distribot
         end
         def initialize
           self.queue_name = @@queues[self.class]
-          Distribot.queue(self.queue_name).subscribe do |_, _, payload|
-#pp 'payload(distribot.workflow.created)' => payload
-            message = JSON.parse(payload, symbolize_names: true)
+puts "#{self}.subscribe(#{self.queue_name})"
+          Distribot.subscribe(self.queue_name) do |message|
+#puts "#{self.class}.received(#{self.queue_name}, #{message})"
             self.send(@@handlers[self.class], message)
           end
         end
