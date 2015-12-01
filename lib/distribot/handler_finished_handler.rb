@@ -15,10 +15,19 @@ module Distribot
                               .map{|key| Distribot.redis.get(key) }
                               .reject(&:nil?)
                               .select{|val| val.to_i > 0 }
+
       if handlers_unfinished.empty?
         Distribot.publish! 'distribot.workflow.phase.finished', {
           workflow_id: workflow.id,
           phase: phase.name
+        }
+        Distribot.broadcast! 'distribot.cancel.consumer', {
+          id: SecureRandom.uuid,
+          type: 'cancel_consumer_queue',
+          workflow_id: message[:workflow_id],
+          phase: message[:phase],
+          handler: message[:handler],
+          task_queue: message[:task_queue]
         }
       end
     end

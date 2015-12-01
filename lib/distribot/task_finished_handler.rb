@@ -6,8 +6,9 @@ module Distribot
     subscribe_to 'distribot.workflow.handler.enumerated', handler: :callback
 
     def callback(message)
+      @consumers ||= [ ]
 #      if Distribot.queue_exists?( message[:finished_queue] )
-        Distribot.subscribe(message[:finished_queue]) do |task_info|
+        @consumers << Distribot.subscribe(message[:finished_queue]) do |task_info|
           handle_task_finished(message, task_info)
         end
 #      else
@@ -25,8 +26,23 @@ puts "DECR: #{current_value} -> #{new_value}"
           Distribot.publish! 'distribot.workflow.handler.finished', {
             workflow_id: message[:workflow_id],
             phase: message[:phase],
-            handler: message[:handler]
+            handler: message[:handler],
+            task_queue: message[:task_queue]
           }
+          # Distribot.broadcast! message[:cancel_consumer_queue], {
+          #   type: 'cancel_consumer_queue',
+          #   workflow_id: message[:workflow_id],
+          #   phase: message[:phase],
+          #   handler: message[:handler],
+          #   task_queue: message[:task_queue]
+          # }
+
+# #byebug
+           gonners = @consumers.select{|x| x.queue.name == message[:finished_queue]}
+           @consumers -= gonners
+# puts "________________ CANCEL(#{gonners.uniq{|x| x.queue.name }.map(&:queue).map(&:name)}) ______________________"
+pp canceling: gonners.uniq{|x| x.queue.name }.map(&:queue).map(&:name)
+           gonners.uniq{|x| x.queue.name }.map(&:cancel)
         end
       end
     end

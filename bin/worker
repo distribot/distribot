@@ -20,16 +20,16 @@ class SimpleWorker
   process_tasks_with :process
 
   def enumerate(context, &callback)
-    5.times do |chunk|
+    1.times do |chunk|
       id = SecureRandom.uuid
-      jobs = (1..10_000).to_a.map{|n| {id: id, args: [chunk, n] } }
+      jobs = (1..1).to_a.map{|n| {id: id, args: [chunk, n] } }
       callback.call(jobs)
-      sleep 1
+#      sleep 0.1
     end
   end
 
   def process(context, job)
-    puts "Processing job '#{job}'"
+    puts "Processing job '#{context.workflow_id} #{job[:args]}'"
 #    sleep 0.1
   end
 end

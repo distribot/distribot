@@ -19,18 +19,22 @@ module Distribot
           process_queue = "distribot.workflow.handler.#{handler}.process"
           task_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
           finished_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.finished"
+          cancel_consumer_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.cancel-consumers"
 
           Distribot.publish! enumerate_queue, {
             workflow_id: workflow.id,
             phase: phase.name,
             task_queue: task_queue,
-            finished_queue: finished_queue
+            finished_queue: finished_queue,
+            cancel_consumer_queue: cancel_consumer_queue
           }
           Distribot.broadcast! process_queue, {
+            type: 'process_queue',
             workflow_id: workflow.id,
             phase: phase.name,
             task_queue: task_queue,
-            finished_queue: finished_queue
+            finished_queue: finished_queue,
+            cancel_consumer_queue: cancel_consumer_queue
           }
         end
       end

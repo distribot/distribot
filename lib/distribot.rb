@@ -89,7 +89,7 @@ puts "FAILED..."
   end
 
   def self.publish!(queue_name, data)
-pp publish: queue_name, data: data
+#pp publish: queue_name, data: data
     while true do
       begin
         queue_obj = queue(queue_name)
@@ -106,31 +106,28 @@ pp publish: queue_name, data: data
     @@fanout ||= bunny.create_channel.fanout('distribot.fanout')
   end
 
-  def self.subscribe(queue_name, &block)
-pp subscribe: queue_name
-#sleep 0.2
+  def self.subscribe(queue_name, options={}, &block)
     ch = bunny_channel
-#    ch.prefetch(1)
+    ch.prefetch(1)
     queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
-    queue_obj.subscribe(manual_ack: true) do |delivery_info, properties, payload|
+    queue_obj.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))
       ch.acknowledge(delivery_info.delivery_tag, false)
     end
   end
 
   def self.subscribe_multi(queue_name, &block)
-#sleep 0.2
     ch = bunny_channel
-    my_queue = ch.queue('', exclusive: true)
-    ch.fanout('distribot.fanout')
+    my_queue = ch.queue('', exclusive: true, auto_delete: true)
+    x = ch.fanout('distribot.fanout')
     my_queue.bind(fanout_exchange).subscribe do |delivery_info, properties, payload|
-pp subscribe_multi: payload
       block.call(JSON.parse(payload, symbolize_names: true))
     end
   end
 
   def self.broadcast!(queue_name, data)
-    x = bunny_channel.fanout('distribot.fanout')
+    ch = bunny_channel
+    x = ch.fanout('distribot.fanout')
     x.publish(data.to_json, routing_key: queue_name)
   end
 
