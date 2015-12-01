@@ -10,8 +10,8 @@ subscribe: distribot.workflow.created(:workflow_id)
 subscribe: distribot.workflow.phase.started(:workflow_id, :phase)
   * on receive:
     1. for each of this phase's handlers:
-      a. publish: distribot.workflow.handler.$handler.enumerate(:workflow_id, :phase, :task_queue, :finished_queue, :cancel_consumer_queue)
-      b. broadcast: distribot.workflow.handler.$handler.process(:workflow_id, :phase, :task_queue, :finished_queue, :cancel_consumer_queue)
+      1. publish: distribot.workflow.handler.$handler.enumerate(:workflow_id, :phase, :task_queue, :finished_queue, :cancel_consumer_queue)
+      2. broadcast: distribot.workflow.handler.$handler.process(:workflow_id, :phase, :task_queue, :finished_queue, :cancel_consumer_queue)
 
 subscribe: distribot.workflow.handler.enumerated(:workflow_id, :phase, :task_queue, :finished_queue, :handler)
   * on receive:
