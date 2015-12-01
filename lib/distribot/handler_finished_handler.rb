@@ -22,11 +22,6 @@ module Distribot
           phase: phase.name
         }
         Distribot.broadcast! 'distribot.cancel.consumer', {
-          id: SecureRandom.uuid,
-          type: 'cancel_consumer_queue',
-          workflow_id: message[:workflow_id],
-          phase: message[:phase],
-          handler: message[:handler],
           task_queue: message[:task_queue]
         }
       end

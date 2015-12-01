@@ -8,28 +8,20 @@ module Distribot
 
     def callback(message)
       workflow = Distribot::Workflow.find(message[:workflow_id])
-puts ">>>>>>>>>>>>>>>>>>>> WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+      workflow.phases.each do |phase|
+        phase.handlers.each do |handler|
+          task_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
+          Distribot.broadcast! 'distribot.cancel.consumer', {
+            task_queue: task_queue
+          }
+        end
+      end
       if Distribot.queue_exists?("distribot.workflow.#{workflow.id}.finished")
         Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
           workflow_id: workflow.id
         }
       end
-
-
-      workflow.phases.each do |phase|
-        phase.handlers.each do |handler|
-          task_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
-puts "CANCEL!!!! #{task_queue} !!!!"
-          Distribot.broadcast! 'distribot.cancel.consumer', {
-            id: SecureRandom.uuid,
-            type: 'cancel_consumer_queue',
-            workflow_id: message[:workflow_id],
-            phase: phase.name,
-            handler: handler,
-            task_queue: task_queue
-          }
-        end
-      end
+puts ">>>>>>>>>>>>>>>>>>>> WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
       # TODO: mark this workflow as 'finished'
       # Maybe via Sidekiq.
