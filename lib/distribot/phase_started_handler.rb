@@ -29,7 +29,6 @@ module Distribot
             cancel_consumer_queue: cancel_consumer_queue
           }
           Distribot.broadcast! process_queue, {
-            type: 'process_queue',
             workflow_id: workflow.id,
             phase: phase.name,
             task_queue: task_queue,

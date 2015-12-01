@@ -41,7 +41,7 @@ puts "DECR: #{current_value} -> #{new_value}"
            gonners = @consumers.select{|x| x.queue.name == message[:finished_queue]}
            @consumers -= gonners
 # puts "________________ CANCEL(#{gonners.uniq{|x| x.queue.name }.map(&:queue).map(&:name)}) ______________________"
-pp canceling: gonners.uniq{|x| x.queue.name }.map(&:queue).map(&:name)
+#pp canceling: gonners.uniq{|x| x.queue.name }.map(&:queue).map(&:name)
            gonners.uniq{|x| x.queue.name }.map(&:cancel)
         end
       end

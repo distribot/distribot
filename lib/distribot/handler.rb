@@ -23,7 +23,7 @@ module Distribot
           self.queue_name = @@queues[self.class]
 puts "#{self}.subscribe(#{self.queue_name})"
           Distribot.subscribe(self.queue_name) do |message|
-puts "#{self.class}.received(#{self.queue_name}, #{message})"
+#puts "#{self.class}.received(#{self.queue_name}, #{message})"
             self.send(@@handlers[self.class], message)
           end
         end

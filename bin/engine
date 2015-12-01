@@ -27,7 +27,7 @@ module Example
         },
         {
           name: 'working',
-          handlers: ['SimpleWorker'],
+          handlers: ['SimpleWorker','AnotherWorker'],
           transitions_to: 'finish'
         },
         {

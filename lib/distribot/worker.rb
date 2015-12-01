@@ -41,21 +41,19 @@ module Distribot
               phase: message[:phase],
               task_queue: message[:task_queue],
               finished_queue: message[:finished_queue],
-              handler: message[:handler]
+              handler: self.class.to_s
             }
             nil
           end
 
 
           Distribot.subscribe_multi( 'distribot.cancel.consumer' ) do |cancel_message|
-            if cancel_message[:type] == 'cancel_consumer_queue'
-              gonners = @task_consumers.select{|x| x && (x.queue.name == cancel_message[:task_queue])}
-              semaphore.synchronize do
-                gonners.each do |gonner|
-                  gonner.cancel
-                end
-                @task_consumers -= gonners
+            gonners = @task_consumers.select{|x| x && (x.queue.name == cancel_message[:task_queue])}
+            semaphore.synchronize do
+              gonners.each do |gonner|
+                gonner.cancel
               end
+              @task_consumers -= gonners
             end
             nil
           end
