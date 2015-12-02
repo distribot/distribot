@@ -25,7 +25,6 @@ subscribe: distribot.workflow.handler.finished(:workflow_id, :phase, :handler, :
   * on receive:
     1. if all handlers for :phase have completed
       * publish: distribot.workflow.phase.finished(:workflow_id, :phase)
-      * broadcast: distribot.cancel.consumer(:task_queue)
 
 subscribe: distribot.workflow.phase.finished(:workflow_id, :phase)
   * on receive:
@@ -55,6 +54,8 @@ subscribe: distribot.workflow.handler.$handler.enumerate(:workflow_id, :phase, :
     2. publish: distribot.workflow.handler.enumerated(:workflow_id, :phase, :task_queue, :finished_queue, :handler)
 
 subscribe: distribot.cancel.consumer(:task_queue)
+  * on receive:
+    1. unsubscribe from :task_queue
 
 subscribe_multi: distribot.workflow.handler.$handler.process(:workflow_id, :phase, :task_queue, :finished_queue, :cancel_consumer_queue)
   * on receive:
