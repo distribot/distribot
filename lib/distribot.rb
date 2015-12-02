@@ -19,7 +19,7 @@ module Distribot
 
   @@config = OpenStruct.new()
   @@did_configure = false
-  @@fanouts = { }
+  @@bunnies = { }
 
   def self.configure(&block)
     @@did_configure = true
@@ -38,28 +38,22 @@ module Distribot
   end
 
   def self.bunny
-    @@bunny ||= Bunny.new( configuration.rabbitmq_url )
+    key = Thread.current.to_s
+    if @@bunnies.has_key?(key)
+      return @@bunnies[key]
+    else
+      thread_bunny = @@bunnies[key] = Bunny.new( configuration.rabbitmq_url )
+      thread_bunny.start
+      return thread_bunny
+    end
   end
 
   def self.queue_exists?(name)
     bunny.queue_exists?(name)
   end
 
-  def self.bunny_channel
-    unless defined? @@channel
-      while true do
-        begin
-          bunny.start
-          break
-        rescue StandardError => e
-          warn "Could not connect..retrying in 1 second..."
-          sleep 1
-          next
-        end
-      end
-    end
+  def self.bunny_channel(topic)
     @@channel ||= bunny.create_channel
-    @@channel
   end
 
   def self.redis
@@ -80,40 +74,18 @@ module Distribot
   end
 
   def self.queue(name)
-    @@queues ||= { }
-    return @@queues[name] if @@queues[name]
-    failed = false
-    while true do
-      begin
-        queue = bunny_channel.queue(name, auto_delete: true, durable: true)
-warn "SUCCEEDED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" if failed
-        return @@queues[name] = queue
-      rescue StandardError => e
-puts "FAILED..."
-        failed = true
-        sleep 0.1
-        next
-      end
-    end
+    bunny_channel(name).queue(name, auto_delete: true, durable: true)
   end
 
   def self.publish!(queue_name, data)
-    while true do
-      begin
-        queue_obj = queue(queue_name)
-        bunny_channel.default_exchange.publish data.to_json, routing_key: queue_obj.name
-        break
-      rescue StandardError => e
-        puts "ERROR in publish! #{e} --- #{e.backtrace.join("\n")}"
-        sleep 0.1
-      end
-    end
+    queue_obj = queue(queue_name)
+    bunny_channel(name).default_exchange.publish data.to_json, routing_key: queue_name
   end
 
   def self.subscribe(queue_name, options={}, &block)
 puts "SUBSCRIBE(#{queue_name})"
-    ch = bunny_channel
-    ch.prefetch(1)
+    ch = bunny_channel(name)
+#    ch.prefetch(1)
     queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
     queue_obj.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))
@@ -121,20 +93,22 @@ puts "SUBSCRIBE(#{queue_name})"
     end
   end
 
+  def self.broadcast!(topic, data)
+puts "broadcast"
+    ch = bunny_channel(name)
+    x = ch.fanout("distribot.fanout.#{topic}")
+    x.publish(data.to_json, routing_key: topic)
+  end
+
   def self.subscribe_multi(topic, &block)
-    ch = bunny_channel
+puts "subscribe_multi"
+    ch = bunny_channel(name)
     ch.prefetch(1)
     my_queue = ch.queue('', exclusive: true, auto_delete: true)
     x = ch.fanout("distribot.fanout.#{topic}")
     my_queue.bind(x).subscribe do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))
     end
-  end
-
-  def self.broadcast!(topic, data)
-    ch = bunny_channel
-    x = ch.fanout("distribot.fanout.#{topic}")
-    x.publish(data.to_json, routing_key: topic)
   end
 
 end

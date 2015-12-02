@@ -46,16 +46,17 @@ phase_started = Distribot::PhaseStartedHandler.new
 phase_finished = Distribot::PhaseFinishedHandler.new
 task_finished = Distribot::TaskFinishedHandler.new
 handler_finished = Distribot::HandlerFinishedHandler.new
-phase_finished = Distribot::PhaseFinishedHandler.new
 workflow_finished = Distribot::WorkflowFinishedHandler.new
 
 Distribot::WorkflowCreatedHandler.new
 
 puts "<ENTER> to create a workflow:"
+gets
 @count = 1
-while gets do
-  @count += 1
+while true do
   Example.make_workflow "INIT: #{@count}"
+  @count += 1
+  sleep
 end
 
 

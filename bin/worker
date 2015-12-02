@@ -30,9 +30,10 @@ class SimpleWorker
 
   def process(context, job)
     puts "Processing job '#{context.workflow_id}.#{context.phase}.#{self} #{job[:args]}'"
-    sleep 0.1
+#    sleep 0.1
   end
 end
 
+SimpleWorker.new
 
 sleep
