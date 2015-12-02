@@ -17,6 +17,8 @@ module Distribot
         end
       end
 #      if Distribot.queue_exists?("distribot.workflow.#{workflow.id}.finished.callback")
+      Distribot.redis.decr('distribot.workflows.running')
+      Distribot.redis.incr('finished')
         Distribot.publish! "distribot.workflow.#{workflow.id}.finished.callback", {
           workflow_id: workflow.id
         }

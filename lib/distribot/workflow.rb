@@ -33,7 +33,7 @@ module Distribot
         if block_given?
           sleep 1
           finished_callback = "distribot.workflow.#{self.id}.finished.callback"
-          self.consumer = Distribot.subscribe(finished_callback) do |message|
+          self.consumer = Distribot.subscribe(finished_callback, block: true) do |message|
 puts "///////////////////////////////////"
             block.call(message)
             if self.consumer

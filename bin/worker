@@ -22,16 +22,16 @@ class SimpleWorker
   def enumerate(context, &callback)
     jobs = [ ]
     1.times do |chunk|
-      jobs << (1..2000).to_a.map{|n| {id: SecureRandom.uuid, args: [chunk, n] } }
+      jobs << (1..1).to_a.map{|n| {id: SecureRandom.uuid, args: [chunk, n] } }
     end
-sleep 0.5
+#sleep 0.5
     callback.call(jobs)
   end
 
   def process(context, job)
 puts job
 #    puts "Processing job '#{context.workflow_id}.#{context.phase}.#{self} #{job[:args]}'"
-    sleep 0.5
+#    sleep 0.5
   end
 end
 

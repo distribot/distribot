@@ -35,42 +35,6 @@ module Example
             ForeignWorker
             SlowWorker
           ),
-          transitions_to: 'part2'
-        },
-        {
-          name: 'part2',
-          handlers: %w(
-            HardWorker
-            GoodWorker
-            FastWorker
-            CheapWorker
-            ForeignWorker
-            SlowWorker
-          ),
-          transitions_to: 'part3'
-        },
-        {
-          name: 'part3',
-          handlers: %w(
-            HardWorker
-            GoodWorker
-            FastWorker
-            CheapWorker
-            ForeignWorker
-            SlowWorker
-          ),
-          transitions_to: 'part4'
-        },
-        {
-          name: 'part4',
-          handlers: %w(
-            HardWorker
-            GoodWorker
-            FastWorker
-            CheapWorker
-            ForeignWorker
-            SlowWorker
-          ),
           transitions_to: 'finish'
         },
         {
@@ -79,47 +43,67 @@ module Example
         }
       ]
     )
-    Distribot.redis.incr('distribot.running.workflows')
-    @workflow.save! do |workflow|
-      Distribot.redis.decr('distribot.running.workflows')
-      new_index = Distribot.redis.incr('finished')
-puts "/////////////////////////////// ------------------------ ///////////////////"
-      max = Distribot.redis.get('distribot.max.workflows').to_i
-      current = Distribot.redis.get('distribot.running.workflows').to_i
-      diff = max - current
-      max_accelleration = 9999
-      increase = diff > max_accelleration ? max_accelleration : diff
-      increase.times do |num|
-        puts "+++++++++ SPAWN #{num + 1}/#{increase} +++++++++++"
-        Example.make_workflow("Workflow: #{new_index} -> ")
-      end
-    end
+@workflow.save!
+#     @workflow.save! do |workflow|
+#       Distribot.redis.decr('distribot.running.workflows')
+#       new_index = Distribot.redis.incr('finished')
+# puts "/////////////////////////////// ------------------------ ///////////////////"
+#       max = Distribot.redis.get('distribot.max.workflows').to_i
+#       current = Distribot.redis.get('distribot.running.workflows').to_i
+#       diff = max - current
+#       max_accelleration = 9999
+#       increase = diff > max_accelleration ? max_accelleration : diff
+#       increase.times do |num|
+#         puts "+++++++++ SPAWN #{num + 1}/#{increase} +++++++++++"
+#         Example.make_workflow("Workflow: #{new_index} -> ")
+#       end
+#     end
     @workflow
   end
 end
 
-phase_started = Distribot::PhaseStartedHandler.new
-phase_finished = Distribot::PhaseFinishedHandler.new
-task_finished = Distribot::TaskFinishedHandler.new
-handler_finished = Distribot::HandlerFinishedHandler.new
-workflow_finished = Distribot::WorkflowFinishedHandler.new
+pids = [ ]
+pids << fork do
+  phase_started = Distribot::PhaseStartedHandler.new
+  sleep
+end
+pids << fork do
+  phase_finished = Distribot::PhaseFinishedHandler.new
+  sleep
+end
+pids << fork do
+  task_finished = Distribot::TaskFinishedHandler.new
+  sleep
+end
+pids << fork do
+  handler_finished = Distribot::HandlerFinishedHandler.new
+  sleep
+end
+pids << fork do
+  workflow_finished = Distribot::WorkflowFinishedHandler.new
+  sleep
+end
 
-Distribot::WorkflowCreatedHandler.new
+pids << fork do
+  Distribot::WorkflowCreatedHandler.new
+  sleep
+end
 
 Distribot.redis.set("finished", 0)
 
 max = ARGV.shift.to_i
+max = 1 if max <= 0
 puts "<ENTER> when ready:"
 gets
 
-Distribot.redis.set('distribot.running.workflows', 0)
-Distribot.redis.set('distribot.max.workflows', max)
+Distribot.redis.set('distribot.workflows.running', 0)
+Distribot.redis.set('distribot.workflows.max', max)
 Example.make_workflow "Workflow[1]"
 
 while true
   sleep 5
-  max = Distribot.redis.get('distribot.max.workflows').to_i
-  current = Distribot.redis.get('distribot.running.workflows').to_i
+  max = Distribot.redis.get('distribot.workflows.max').to_i
+  current = Distribot.redis.get('distribot.workflows.running').to_i
   puts "\tRUNNING: at #{Time.now} -- #{current} / #{max}"
   diff = max - current
   diff.times do |num|
@@ -129,4 +113,5 @@ while true
   end
 end
 
+Process.waitall
 

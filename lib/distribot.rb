@@ -39,7 +39,7 @@ module Distribot
   end
 
   def self.bunny
-    key = Thread.current.to_s
+    key = Process.pid.to_s + ':' + Thread.current.to_s
     if @@bunnies.has_key?(key)
       return @@bunnies[key]
     else
@@ -79,6 +79,7 @@ module Distribot
   end
 
   def self.publish!(queue_name, data)
+puts "publish(#{queue_name})"
     queue_obj = queue(queue_name)
     bunny_channel(name).default_exchange.publish data.to_json, routing_key: queue_name
   end
@@ -95,19 +96,19 @@ puts "SUBSCRIBE(#{queue_name})"
   end
 
   def self.broadcast!(topic, data)
-puts "broadcast"
+puts "broadcast(#{topic})"
     ch = bunny_channel(name)
     x = ch.fanout("distribot.fanout.#{topic}")
     x.publish(data.to_json, routing_key: topic)
   end
 
-  def self.subscribe_multi(topic, &block)
-puts "subscribe_multi"
+  def self.subscribe_multi(topic, options={}, &block)
+puts "subscribe_multi(#{topic})"
     ch = bunny_channel(name)
     ch.prefetch(1)
     my_queue = ch.queue('', exclusive: true, auto_delete: true)
     x = ch.fanout("distribot.fanout.#{topic}")
-    my_queue.bind(x).subscribe do |delivery_info, properties, payload|
+    my_queue.bind(x).subscribe(options) do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))
     end
   end
