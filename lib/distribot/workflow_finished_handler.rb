@@ -16,22 +16,13 @@ module Distribot
           }
         end
       end
-      if Distribot.queue_exists?("distribot.workflow.#{workflow.id}.finished")
-        Distribot.publish! "distribot.workflow.#{workflow.id}.finished", {
+#      if Distribot.queue_exists?("distribot.workflow.#{workflow.id}.finished.callback")
+        Distribot.publish! "distribot.workflow.#{workflow.id}.finished.callback", {
           workflow_id: workflow.id
         }
-      end
+#      end
 puts ">>>>>>>>>>>>>>>>>>>> WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
-      # TODO: mark this workflow as 'finished'
-      # Maybe via Sidekiq.
-      if ENV.has_key? 'MAX_WORKFLOWS'
-        if @@total < @@max
-          Distribot::Workflow.create!(workflow.send(:to_hash).except(:id).merge(name: "Workflow ##{@@total + 1}"))
-          Distribot::Workflow.create!(workflow.send(:to_hash).except(:id).merge(name: "Workflow ##{@@total + 2}"))
-          @@total += 2
-        end
-      end
     end
   end
 end

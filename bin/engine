@@ -23,12 +23,53 @@ module Example
         {
           name: 'start',
           is_initial: true,
-          transitions_to: 'working'
+          transitions_to: 'part1'
         },
         {
-          name: 'working',
+          name: 'part1',
           handlers: %w(
-            SimpleWorker
+            HardWorker
+            GoodWorker
+            FastWorker
+            CheapWorker
+            ForeignWorker
+            SlowWorker
+          ),
+          transitions_to: 'part2'
+        },
+        {
+          name: 'part2',
+          handlers: %w(
+            HardWorker
+            GoodWorker
+            FastWorker
+            CheapWorker
+            ForeignWorker
+            SlowWorker
+          ),
+          transitions_to: 'part3'
+        },
+        {
+          name: 'part3',
+          handlers: %w(
+            HardWorker
+            GoodWorker
+            FastWorker
+            CheapWorker
+            ForeignWorker
+            SlowWorker
+          ),
+          transitions_to: 'part4'
+        },
+        {
+          name: 'part4',
+          handlers: %w(
+            HardWorker
+            GoodWorker
+            FastWorker
+            CheapWorker
+            ForeignWorker
+            SlowWorker
           ),
           transitions_to: 'finish'
         },
@@ -38,7 +79,22 @@ module Example
         }
       ]
     )
-    @workflow.save!
+    Distribot.redis.incr('distribot.running.workflows')
+    @workflow.save! do |workflow|
+      Distribot.redis.decr('distribot.running.workflows')
+      new_index = Distribot.redis.incr('finished')
+puts "/////////////////////////////// ------------------------ ///////////////////"
+      max = Distribot.redis.get('distribot.max.workflows').to_i
+      current = Distribot.redis.get('distribot.running.workflows').to_i
+      diff = max - current
+      max_accelleration = 9999
+      increase = diff > max_accelleration ? max_accelleration : diff
+      increase.times do |num|
+        puts "+++++++++ SPAWN #{num + 1}/#{increase} +++++++++++"
+        Example.make_workflow("Workflow: #{new_index} -> ")
+      end
+    end
+    @workflow
   end
 end
 
@@ -50,13 +106,27 @@ workflow_finished = Distribot::WorkflowFinishedHandler.new
 
 Distribot::WorkflowCreatedHandler.new
 
-puts "<ENTER> to create a workflow:"
+Distribot.redis.set("finished", 0)
+
+max = ARGV.shift.to_i
+puts "<ENTER> when ready:"
 gets
-@count = 1
-while true do
-  Example.make_workflow "INIT: #{@count}"
-  @count += 1
-  sleep
+
+Distribot.redis.set('distribot.running.workflows', 0)
+Distribot.redis.set('distribot.max.workflows', max)
+Example.make_workflow "Workflow[1]"
+
+while true
+  sleep 5
+  max = Distribot.redis.get('distribot.max.workflows').to_i
+  current = Distribot.redis.get('distribot.running.workflows').to_i
+  puts "\tRUNNING: at #{Time.now} -- #{current} / #{max}"
+  diff = max - current
+  diff.times do |num|
+    new_index = Distribot.redis.incr('finished')
+    puts "+++++++++ SPAWN #{num + 1}/#{diff} +++++++++++"
+    Example.make_workflow("Workflow: #{new_index} -> ")
+  end
 end
 
 

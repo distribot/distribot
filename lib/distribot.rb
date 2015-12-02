@@ -20,6 +20,7 @@ module Distribot
   @@config = OpenStruct.new()
   @@did_configure = false
   @@bunnies = { }
+  @@channel = {}
 
   def self.configure(&block)
     @@did_configure = true
@@ -53,7 +54,7 @@ module Distribot
   end
 
   def self.bunny_channel(topic)
-    @@channel ||= bunny.create_channel
+    @@channel[topic] ||= bunny.create_channel
   end
 
   def self.redis
@@ -85,7 +86,7 @@ module Distribot
   def self.subscribe(queue_name, options={}, &block)
 puts "SUBSCRIBE(#{queue_name})"
     ch = bunny_channel(name)
-#    ch.prefetch(1)
+    ch.prefetch(1)
     queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
     queue_obj.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
       block.call(JSON.parse(payload, symbolize_names: true))

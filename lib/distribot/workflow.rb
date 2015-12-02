@@ -1,7 +1,7 @@
 
 module Distribot
   class Workflow
-    attr_accessor :id, :name, :phases
+    attr_accessor :id, :name, :phases, :consumer
 
     def initialize(attrs={})
       self.id = attrs[:id]
@@ -30,23 +30,21 @@ module Distribot
         workflow_id: self.id
       }
       if is_new
-        self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
         if block_given?
-          finished_id = "distribot.workflow.#{self.id}.finished"
-          @consumer = Distribot.subscribe(finished_id) do |message|
-            Distribot.redis.set(finished_id, message.to_json)
-          end
-          while true do
-            sleep 1
-            payload = Distribot.redis.get(finished_id)
-            unless payload.nil?
-              @consumer.cancel
-              Distribot.redis.del(finished_id)
-              break
+          sleep 1
+          finished_callback = "distribot.workflow.#{self.id}.finished.callback"
+          self.consumer = Distribot.subscribe(finished_callback) do |message|
+puts "///////////////////////////////////"
+            block.call(message)
+            if self.consumer
+              begin
+                self.consumer.cancel
+              rescue
+              end
             end
           end
-          block.call(payload)
         end
+        self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
       end
     end
 
