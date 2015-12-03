@@ -12,7 +12,7 @@ infra:
     - 15672
     - 6379
 
-distribot:
+engine:
   image: distribot/dev
   # build: .
   # dockerfile: ./Dockerfile
@@ -24,7 +24,7 @@ distribot:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "tail -f /dev/null"
+  command: bash -c "sudo gem install eye --no-ri --no-rdoc && bundle && tail -f /dev/null"
 
 worker:
   image: distribot/dev
@@ -38,4 +38,18 @@ worker:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "tail -f /dev/null"
+  command: bash -c "bundle && tail -f /dev/null"
+
+controller:
+  image: distribot/dev
+  # build: .
+  # dockerfile: ./Dockerfile
+  volumes:
+    - ./:/var/www/distribot
+  environment:
+    - TERM=xterm
+    - INFRA_HOST=infra_1
+  working_dir: /var/www/distribot
+  links:
+    - infra
+  command: bash -c "bundle && tail -f /dev/null"
