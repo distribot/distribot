@@ -31,10 +31,8 @@ module Distribot
       }
       if is_new
         if block_given?
-          sleep 1
           finished_callback = "distribot.workflow.#{self.id}.finished.callback"
-          self.consumer = Distribot.subscribe(finished_callback, block: true) do |message|
-puts "///////////////////////////////////"
+          self.consumer = Distribot.subscribe(finished_callback) do |message|
             block.call(message)
             if self.consumer
               begin

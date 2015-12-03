@@ -54,7 +54,7 @@ module Distribot
   end
 
   def self.bunny_channel(topic)
-    @@channel[topic] ||= bunny.create_channel
+    @@channel['topic'] ||= bunny.create_channel
   end
 
   def self.redis

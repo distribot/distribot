@@ -1,8 +1,6 @@
 
 module Distribot
   class WorkflowFinishedHandler
-    @@total = 0
-    @@max = ENV["MAX_WORKFLOWS"].to_i > 0 ? ENV["MAX_WORKFLOWS"].to_i : 10
     include Distribot::Handler
     subscribe_to 'distribot.workflow.finished', handler: :callback
 
@@ -16,15 +14,12 @@ module Distribot
           }
         end
       end
-#      if Distribot.queue_exists?("distribot.workflow.#{workflow.id}.finished.callback")
       Distribot.redis.decr('distribot.workflows.running')
-      Distribot.redis.incr('finished')
+      if Distribot.queue_exists?("distribot.workflow.#{workflow.id}.finished.callback")
         Distribot.publish! "distribot.workflow.#{workflow.id}.finished.callback", {
           workflow_id: workflow.id
         }
-#      end
-puts ">>>>>>>>>>>>>>>>>>>> WORKFLOW #{workflow.name} FINISHED!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-
+      end
     end
   end
 end
