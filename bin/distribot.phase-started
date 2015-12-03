@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'distribot'
+require 'dotenv'
+
+Dotenv.load
+
+Distribot.configure do |config|
+  config.redis_url = ENV['DISTRIBOT_REDIS_URL']
+  config.rabbitmq_url = ENV['DISTRIBOT_RABBITMQ_URL']
+end
+
+Distribot::PhaseStartedHandler.new
+sleep

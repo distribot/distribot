@@ -6,3 +6,6 @@ cool/
 ws/
 bin/killer.rb
 channel.rb
+log/
+tmp/
+.env

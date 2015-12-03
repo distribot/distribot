@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'distribot'
+require 'byebug'
+require 'pp'
+require 'active_support/core_ext/object'
+require 'active_support/core_ext/array'
+require 'active_support/json'
+require 'dotenv'
+
+Dotenv.load
+
+Distribot.configure do |config|
+  config.redis_url = ENV['DISTRIBOT_REDIS_URL']
+  config.rabbitmq_url = ENV['DISTRIBOT_RABBITMQ_URL']
+end
+
+module Example
+  def self.make_workflow(name)
+    name += "#1"
+    @workflow = Distribot::Workflow.new(
+      name: name,
+      phases: [
+        {
+          name: 'start',
+          is_initial: true,
+          transitions_to: 'part1'
+        },
+        {
+          name: 'part1',
+          handlers: %w(
+            HardWorker
+          ),
+          transitions_to: 'part2'
+        },
+        {
+          name: 'part2',
+          handlers: %w(
+            GoodWorker
+            FastWorker
+          ),
+          transitions_to: 'part3'
+        },
+        {
+          name: 'part3',
+          handlers: %w(
+            CheapWorker
+            ForeignWorker
+          ),
+          transitions_to: 'part4'
+        },
+        {
+          name: 'part4',
+          handlers: %w(
+            SlowWorker
+          ),
+          transitions_to: 'finish'
+        },
+        {
+          name: 'finish',
+          is_final: true
+        }
+      ]
+    )
+    @workflow.save! do |workflow|
+      finished = Distribot.redis.incr('finished')
+      puts "WORKFLOW FINISHED: #{workflow}: #{finished} total"
+    end
+    @workflow
+  end
+end
+
+Distribot.redis.set("finished", 0)
+
+max = ARGV.shift.to_i
+max = 1 if max <= 0
+puts "<ENTER> when ready:"
+gets
+
+Distribot.redis.set('distribot.workflows.running', 0)
+Distribot.redis.set('distribot.workflows.max', max)
+Example.make_workflow "Workflow[1]"
+
+while true
+  sleep 5
+  max = Distribot.redis.get('distribot.workflows.max').to_i
+  current = Distribot.redis.get('distribot.workflows.running').to_i
+  puts "\tRUNNING: at #{Time.now} -- #{current} / #{max}"
+  diff = max - current
+  diff.times do |num|
+    new_index = Distribot.redis.get('finished')
+    puts "+++++++++ SPAWN #{num + 1}/#{diff} +++++++++++"
+    Example.make_workflow("Workflow: #{new_index} -> ")
+  end
+end
+
+
