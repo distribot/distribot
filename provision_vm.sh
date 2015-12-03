@@ -85,5 +85,9 @@ fi
 sudo wget -O /usr/bin/rabbitmqadmin http://localhost:15672/cli/rabbitmqadmin
 sudo chmod +x /usr/bin/rabbitmqadmin
 
+sudo gem install eye --no-ri --no-rdoc
+
 cd /var/www/distribot
 bundle
+
+
