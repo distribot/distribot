@@ -132,6 +132,7 @@ describe Distribot::Workflow do
 
   describe '#next_phase' do
     before do
+      expect(Distribot).to receive(:publish!).at_least(1).times
       @workflow = Distribot::Workflow.create!(
         name: 'foobar',
         phases: [
@@ -142,7 +143,6 @@ describe Distribot::Workflow do
     end
     context 'when there is a next phase' do
       it 'returns the next phase name' do
-#byebug
         expect(@workflow.next_phase).to eq 'step2'
       end
     end
