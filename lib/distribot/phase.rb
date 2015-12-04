@@ -10,6 +10,7 @@ module Distribot
                   :handlers
 
     def initialize(attrs={})
+      attrs[:handlers] ||= [ ]
       attrs.each do |key,val|
         self.send("#{key}=", val)
       end

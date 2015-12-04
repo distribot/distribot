@@ -15,7 +15,6 @@ module Distribot
         }
       else
         phase.handlers.each do |handler|
-puts "#{handler}.ENQUEUE NOW ******************************"
           enumerate_queue = "distribot.workflow.handler.#{handler}.enumerate"
           process_queue = "distribot.workflow.handler.#{handler}.process"
           task_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"

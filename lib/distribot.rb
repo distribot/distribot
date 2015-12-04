@@ -32,7 +32,9 @@ module Distribot
 
   def self.configuration
     unless @@did_configure
-      self.configure do
+      self.configure do |config|
+        config.redis_url = ENV['DISTRIBOT_REDIS_URL']
+        config.rabbitmq_url = ENV['DISTRIBOT_RABBITMQ_URL']
       end
     end
     @@config
@@ -79,13 +81,11 @@ module Distribot
   end
 
   def self.publish!(queue_name, data)
-puts "publish(#{queue_name})"
     queue_obj = queue(queue_name)
     bunny_channel(name).default_exchange.publish data.to_json, routing_key: queue_name
   end
 
   def self.subscribe(queue_name, options={}, &block)
-puts "SUBSCRIBE(#{queue_name})"
     ch = bunny_channel(name)
     ch.prefetch(1)
     queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
@@ -96,14 +96,12 @@ puts "SUBSCRIBE(#{queue_name})"
   end
 
   def self.broadcast!(topic, data)
-puts "broadcast(#{topic})"
     ch = bunny_channel(name)
     x = ch.fanout("distribot.fanout.#{topic}")
     x.publish(data.to_json, routing_key: topic)
   end
 
   def self.subscribe_multi(topic, options={}, &block)
-puts "subscribe_multi(#{topic})"
     ch = bunny_channel(name)
     ch.prefetch(1)
     my_queue = ch.queue('', exclusive: true, auto_delete: true)

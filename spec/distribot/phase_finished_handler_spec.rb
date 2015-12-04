@@ -3,6 +3,7 @@ require 'spec_helper'
 describe Distribot::PhaseFinishedHandler do
   before do
     Distribot.stub(:subscribe)
+    Distribot.stub(:publish!)
   end
   describe 'definition' do
     it 'subscribes to the correct queue' do

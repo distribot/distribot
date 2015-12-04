@@ -1,20 +1,15 @@
 require 'spec_helper'
 
 describe Distribot::WorkflowCreatedHandler do
-  before :each do
-    Distribot.stub(:subscribe)
-    Distribot.stub(:publish!)
-    Distribot.stub(:redis) do
-      redis = double('redis')
-      redis.stub(:set)
-      redis.stub(:sadd)
-      redis.stub(:get)
-      redis.stub(:keys){ [] }
-      redis.stub(:smembers){ [] }
-      redis
-    end
-  end
   describe 'definition' do
+    before :each do
+      Distribot.stub(:subscribe)
+      Distribot.stub(:publish!)
+      Distribot.stub(:redis) do
+        redis = double('redis')
+        redis
+      end
+    end
     it 'subscribes to the correct queue' do
       expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.created'
     end

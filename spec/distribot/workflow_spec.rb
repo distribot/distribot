@@ -132,17 +132,17 @@ describe Distribot::Workflow do
 
   describe '#next_phase' do
     before do
-      @workflow = Distribot::Workflow.new(
+      @workflow = Distribot::Workflow.create!(
         name: 'foobar',
         phases: [
           {name: 'step1', is_initial: true, transitions_to: 'step2'},
           {name: 'step2', is_final: true},
         ]
       )
-      @workflow.save!
     end
     context 'when there is a next phase' do
       it 'returns the next phase name' do
+#byebug
         expect(@workflow.next_phase).to eq 'step2'
       end
     end

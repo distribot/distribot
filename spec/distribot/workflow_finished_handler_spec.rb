@@ -8,15 +8,6 @@ describe Distribot::WorkflowFinishedHandler do
       queue
     end
     Distribot.stub(:publish!)
-    Distribot.stub(:redis) do
-      redis = double('redis')
-      redis.stub(:set)
-      redis.stub(:sadd)
-      redis.stub(:get)
-      redis.stub(:keys){ [] }
-      redis.stub(:smembers){ [] }
-      redis
-    end
   end
   describe 'definition' do
     it 'subscribes to the distribot.workflow.finished queue' do
@@ -32,13 +23,20 @@ describe Distribot::WorkflowFinishedHandler do
 
   describe '#callback' do
     before do
-      @workflow_id = SecureRandom.uuid
-      @workflow = Distribot::Workflow.new(id: @workflow_id, name: 'test-workflow')
+      @workflow = Distribot::Workflow.create!(
+        name: 'test-workflow',
+        phases: [
+          {name: 'start', is_initial: true, transitions_to: 'working'},
+          {name: 'working', handlers: ['ExampleHandler'], transitions_to: 'finished'},
+          {name: 'finished', is_final: true}
+        ]
+      )
+      @workflow_id = @workflow.id
     end
-    context 'when the $workflow_id.finished queue' do
+    context 'when the $workflow_id.finished.callback queue' do
       context 'exists' do
         before do
-          @queue_name = "distribot.workflow.#{@workflow_id}.finished"
+          @queue_name = "distribot.workflow.#{@workflow_id}.finished.callback"
           expect(Distribot).to receive(:queue_exists?).with(@queue_name){true}
           expect(Distribot::Workflow).to receive(:find).with(@workflow_id){ @workflow }
         end
@@ -49,7 +47,7 @@ describe Distribot::WorkflowFinishedHandler do
       end
       context 'does not exist' do
         before do
-          @queue_name = "distribot.workflow.#{@workflow_id}.finished"
+          @queue_name = "distribot.workflow.#{@workflow_id}.finished.callback"
           expect(Distribot).to receive(:queue_exists?).with(@queue_name){false}
           expect(Distribot::Workflow).to receive(:find).with(@workflow_id){ @workflow }
         end

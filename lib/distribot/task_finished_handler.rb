@@ -17,7 +17,6 @@ module Distribot
       current_value = Distribot.redis.get(task_counter)
       unless current_value.nil?
         new_value = Distribot.redis.decr task_counter
-puts "DECR: #{current_value} -> #{new_value}"
         if new_value.to_i <= 0
           Distribot.publish! 'distribot.workflow.handler.finished', {
             workflow_id: message[:workflow_id],

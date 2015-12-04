@@ -21,8 +21,8 @@ require 'distribot'
 Distribot.configure do |config|
   # Consider using environment variables instead of hard-coding these values.
   # For ideas, look at the excellent 'dotenv' gem.
-  config.rabbitmq_url = 'amqp://username:password@your.hostname.com:5762'
-  config.redis_url = 'redis://your.redis.hostname:6379/0'
+  config.redis_url = ENV['DISTRIBOT_REDIS_URL']
+  config.rabbitmq_url = ENV['DISTRIBOT_RABBITMQ_URL']
 end
 ```
 

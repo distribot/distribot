@@ -9,3 +9,4 @@ channel.rb
 log/
 tmp/
 .env
+*.gem
