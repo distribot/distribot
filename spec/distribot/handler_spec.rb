@@ -10,7 +10,9 @@ describe Distribot::Handler do
       @id = SecureRandom.hex(8)
       @queue_name = "queue-#{@id}"
       @klass_name = "Foo#{@id}"
-      expect(Distribot).to receive(:subscribe).with(@queue_name, {})
+      expect(Distribot).to receive(:subscribe).with(@queue_name, {}) do |queue_name, args, &block|
+        block.call(queue_name, args, block)
+      end
     end
     it 'subscribes to the queue provided' do
       eval <<-EOF
@@ -22,6 +24,8 @@ describe Distribot::Handler do
       end
       EOF
       Kernel.const_get(@klass_name).new
+      expect(Distribot::Handler.handler_for(@klass_name)).to eq :callback
+      expect(Distribot::Handler.queue_for(@klass_name)).to eq @queue_name
     end
   end
 end
