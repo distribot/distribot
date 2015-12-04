@@ -23,4 +23,24 @@ describe Distribot::TaskFinishedHandler do
       handler.callback(finished_queue: 'foobar')
     end
   end
+
+  describe '#handle_task_finished(message, task_info)' do
+    context 'when the redis task counter' do
+      context 'is nil' do
+        it 'does nothing, because the handler is not yet finished'
+      end
+      context 'is not nil' do
+        it 'decrements the redis task counter by 1'
+        context 'when the task count after decrementing' do
+          context 'is <= 0' do
+            it 'publishes a message to the handler finished queue'
+            it 'cancels any local consumers of the "finished_queue" for that $workflow.$phase.$handler'
+          end
+          context 'is > 0' do
+            it 'does nothing, because the handler is not yet finished'
+          end
+        end
+      end
+    end
+  end
 end
