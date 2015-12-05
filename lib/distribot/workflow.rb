@@ -104,7 +104,7 @@ module Distribot
           result = block.call
           break
         rescue NoMethodError => e
-          warn "Error during #{task}: #{e}"
+          warn "Error during #{task}: #{e} --- #{e.backtrace.join("\n")}"
           sleep 1
           next
         end
