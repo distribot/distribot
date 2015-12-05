@@ -24,8 +24,8 @@ class SimpleWorker
   def enumerate(context, &callback)
     jobs = [ ]
 
-    (1..10).to_a.sample.times do |chunk|
-      max = (1..10).to_a.sample
+    5.times do |chunk|
+      max = 5
       jobs << (1..max).to_a.map{|n| {id: SecureRandom.uuid, args: [chunk, n] } }
     end
 #sleep 0.5
@@ -44,12 +44,7 @@ class GoodWorker < SimpleWorker; end
 class FastWorker < SimpleWorker; end
 class CheapWorker < SimpleWorker; end
 class ForeignWorker < SimpleWorker; end
-class SlowWorker < SimpleWorker;
-  def process(context, job)
-sleep 0.5
-puts context.to_s + job.to_s
-  end
-end
+class SlowWorker < SimpleWorker; end
 
 puts HardWorker.new
 puts GoodWorker.new

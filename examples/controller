@@ -63,9 +63,13 @@ module Example
         }
       ]
     )
-    @workflow.save! do |workflow|
+    @workflow.save! do |info|
       finished = Distribot.redis.incr('finished')
-      puts "WORKFLOW FINISHED: #{workflow}: #{finished} total"
+      workflow = Distribot::Workflow.find(info[:workflow_id])
+      first_transition = workflow.transitions.sort_by(&:timestamp).first
+      last_transition = workflow.transitions.sort_by(&:timestamp).last
+      duration = last_transition.timestamp - first_transition.timestamp
+      puts "WORKFLOW FINISHED: after #{duration} seconds -- #{workflow}: #{finished} total"
     end
     @workflow
   end

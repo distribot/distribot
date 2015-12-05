@@ -32,12 +32,14 @@ module Distribot
         }
         if block_given?
           self.finished_callback_queue = "distribot.workflow.#{self.id}.finished.callback"
-          self.consumer = Distribot.subscribe(self.finished_callback_queue) do |message|
-            block.call(message)
-            if self.consumer
-              begin
-                self.consumer.cancel
-              rescue
+          self.consumer = stubbornly :subscribe do
+            Distribot.subscribe(self.finished_callback_queue) do |message|
+              block.call(message)
+              if self.consumer
+                begin
+                  self.consumer.cancel
+                rescue
+                end
               end
             end
           end
@@ -93,6 +95,20 @@ module Distribot
     def next_phase
       current = self.current_phase
       self.phases.find{|x| x.name == current }.transitions_to
+    end
+
+    def stubbornly task, &block
+      while true do
+        result = nil
+        begin
+          result = block.call
+          break
+        rescue NoMethodError => e
+          puts "Error during #{task}: #{e}"
+          sleep 1
+          next
+        end
+      end
     end
 
     private
