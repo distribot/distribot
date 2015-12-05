@@ -16,14 +16,6 @@ describe Distribot::TaskFinishedHandler do
     end
   end
 
-  describe '#callback( :finished_queue )' do
-    it 'subscribes to the :finished_queue' do
-      handler = described_class.new
-      expect(Distribot).to receive(:subscribe).with('foobar')
-      handler.callback(finished_queue: 'foobar')
-    end
-  end
-
   describe '#handle_task_finished(message, task_info)' do
     before do
       @message = {
@@ -143,11 +135,9 @@ describe Distribot::TaskFinishedHandler do
         expect(@handler).to receive(:handle_task_finished).with(@message, task_info)
         block.call(task_info)
       end
-
-      @handler.callback(@message)
     end
     it 'subscribes with a callback to #handle_task_finished' do
-
+      @handler.callback(@message)
     end
   end
 end
