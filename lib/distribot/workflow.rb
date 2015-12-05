@@ -1,7 +1,7 @@
 
 module Distribot
   class Workflow
-    attr_accessor :id, :name, :phases, :consumer
+    attr_accessor :id, :name, :phases, :consumer, :finished_callback_queue
 
     def initialize(attrs={})
       self.id = attrs[:id]
@@ -21,18 +21,18 @@ module Distribot
     end
 
     def save!(&block)
-      self.id ||= SecureRandom.uuid
+      self.id = SecureRandom.uuid
       record_id = self.redis_id + ':definition'
       is_new = redis.keys(record_id).count <= 0
       redis.set record_id, serialize
 
-      Distribot.publish! 'distribot.workflow.created', {
-        workflow_id: self.id
-      }
       if is_new
+        Distribot.publish! 'distribot.workflow.created', {
+          workflow_id: self.id
+        }
         if block_given?
-          finished_callback = "distribot.workflow.#{self.id}.finished.callback"
-          self.consumer = Distribot.subscribe(finished_callback) do |message|
+          self.finished_callback_queue = "distribot.workflow.#{self.id}.finished.callback"
+          self.consumer = Distribot.subscribe(self.finished_callback_queue) do |message|
             block.call(message)
             if self.consumer
               begin

@@ -33,12 +33,91 @@ describe Distribot::Workflow do
         name: @json[:name],
         phases: @json[:phases]
       )
-      @workflow.save!
     end
-    it 'saves it in redis' do
-      redis = Distribot.redis
-      expect(redis.keys).to include @workflow.redis_id + ':definition'
-      expect(redis.keys).to include @workflow.redis_id + ':transitions'
+    context 'when a callback is provided' do
+      before do
+        # We set the id with a V4 uuid:
+        @id = 'insecure-non-random-uuid'
+        expect(SecureRandom).to receive(:uuid){ @id }
+        expect(@workflow).to receive(:redis_id){'redis-id'}
+
+        # We check for the pre-existence of the workflow:
+        expect(@workflow).to receive(:redis).ordered do
+          redis = double('redis1')
+          # Say it does not exist already:
+          expect(redis).to receive(:keys).with('redis-id:definition'){ [ ] }
+          redis
+        end
+
+        expect(@workflow).to receive(:redis).ordered do
+          redis = double('redis2')
+          # Say it does not exist already:
+          expect(redis).to receive(:set).with('redis-id:definition', anything)
+          redis
+        end
+
+        # We publish our existence:
+        expect(Distribot).to receive(:publish!).with('distribot.workflow.created', {
+          workflow_id: @id
+        })
+
+        # Add a transition in the database:
+        expect(@workflow).to receive(:current_phase){ 'phase1' }
+        expect(@workflow).to receive(:add_transition).with(hash_including(to: 'phase1'))
+      end
+      it 'saves it, then subscribes to the workflow\'s finished.callback queue' do
+        callback_queue = "distribot.workflow.#{@id}.finished.callback"
+        expect(Distribot).to receive(:subscribe).with(callback_queue) do |&block|
+          @callback = block
+        end
+
+        # We didn't set the workflow's consumer when it subscribed, so do it here:
+        consumer = double('consumer')
+        expect(consumer).to receive(:cancel)
+        expect(@workflow).to receive(:consumer).exactly(2).times{ consumer }
+
+        # Finally - action:
+        @workflow.save! do |workflow|
+        end
+        expect(@workflow.id).to eq @id
+        @callback.call({})
+      end
+    end
+    context 'when no callback is provided' do
+      before do
+        # We set the id with a V4 uuid:
+        id = 'insecure-non-random-uuid'
+        expect(SecureRandom).to receive(:uuid){ id }
+        expect(@workflow).to receive(:id=).with(id)
+        expect(@workflow).to receive(:redis_id){'redis-id'}
+
+        # We check for the pre-existence of the workflow:
+        expect(@workflow).to receive(:redis).ordered do
+          redis = double('redis1')
+          # Say it does not exist already:
+          expect(redis).to receive(:keys).with('redis-id:definition'){ [ ] }
+          redis
+        end
+
+        expect(@workflow).to receive(:redis).ordered do
+          redis = double('redis2')
+          # Say it does not exist already:
+          expect(redis).to receive(:set).with('redis-id:definition', anything)
+          redis
+        end
+
+        # We publish our existence:
+        expect(Distribot).to receive(:publish!).with('distribot.workflow.created', {
+          workflow_id: @workflow.id
+        })
+
+        # Add a transition in the database:
+        expect(@workflow).to receive(:current_phase){ 'phase1' }
+        expect(@workflow).to receive(:add_transition).with(hash_including(to: 'phase1'))
+      end
+      it 'saves it in redis' do
+        @workflow.save!
+      end
     end
   end
 
