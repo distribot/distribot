@@ -8,15 +8,8 @@ module Distribot
     def callback(message)
       workflow = Distribot::Workflow.find(message[:workflow_id])
       phase = workflow.phase( message[:phase] )
-      counter_keys = phase.handlers.map do |handler|
-        "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks"
-      end
-      handlers_unfinished = counter_keys
-                              .map{|key| Distribot.redis.get(key) }
-                              .reject(&:nil?)
-                              .select{|val| val.to_i > 0 }
 
-      if handlers_unfinished.empty?
+      if self.all_phase_handler_tasks_are_complete?(workflow, phase)
         Distribot.publish! 'distribot.workflow.phase.finished', {
           workflow_id: workflow.id,
           phase: phase.name
@@ -25,6 +18,17 @@ module Distribot
           task_queue: message[:task_queue]
         }
       end
+    end
+
+    # TODO: Consider folding this logic somewhere else where it makes more sense.
+    def all_phase_handler_tasks_are_complete?(workflow, phase)
+      redis = Distribot.redis
+      phase.handlers
+        .map{|handler| "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.tasks" }
+        .map{|task_counter_key| redis.get(task_counter_key) }
+        .reject(&:nil?)
+        .select{|val| val.to_i > 0 }
+        .empty?
     end
   end
 end

@@ -6,8 +6,7 @@ module Distribot
     subscribe_to 'distribot.workflow.handler.enumerated', handler: :callback
 
     def callback(message)
-      @consumers ||= [ ]
-      @consumers << Distribot.subscribe(message[:finished_queue]) do |task_info|
+      self.consumers << Distribot.subscribe(message[:finished_queue]) do |task_info|
         handle_task_finished(message, task_info)
       end
     end
@@ -24,11 +23,15 @@ module Distribot
             handler: message[:handler],
             task_queue: message[:task_queue]
           }
-          gonners = @consumers.select{|x| x.queue.name == message[:finished_queue]}
-          @consumers -= gonners
-          gonners.uniq{|x| x.queue.name }.map(&:cancel)
+          cancel_consumers_for(message[:finished_queue])
         end
       end
+    end
+
+    def cancel_consumers_for(finished_queue)
+      gonners = self.consumers.select{|x| x.queue.name == finished_queue}
+      self.consumers -= gonners
+      gonners.uniq{|x| x.queue.name }.map(&:cancel)
     end
   end
 end

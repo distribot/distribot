@@ -86,7 +86,7 @@ module Distribot
   end
 
   def self.subscribe(queue_name, options={}, &block)
-    ch = bunny_channel(name)
+    ch = bunny_channel(queue_name)
     ch.prefetch(1)
     queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
     queue_obj.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
