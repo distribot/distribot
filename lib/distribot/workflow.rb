@@ -98,17 +98,18 @@ module Distribot
     end
 
     def stubbornly task, &block
+      result = nil
       while true do
-        result = nil
         begin
           result = block.call
           break
         rescue NoMethodError => e
-          puts "Error during #{task}: #{e}"
+          warn "Error during #{task}: #{e}"
           sleep 1
           next
         end
       end
+      result
     end
 
     private

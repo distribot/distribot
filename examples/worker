@@ -46,11 +46,11 @@ class CheapWorker < SimpleWorker; end
 class ForeignWorker < SimpleWorker; end
 class SlowWorker < SimpleWorker; end
 
-puts HardWorker.new
-puts GoodWorker.new
-puts FastWorker.new
-puts CheapWorker.new
-puts ForeignWorker.new
-puts SlowWorker.new
+puts HardWorker.new.run
+puts GoodWorker.new.run
+puts FastWorker.new.run
+puts CheapWorker.new.run
+puts ForeignWorker.new.run
+puts SlowWorker.new.run
 
 sleep

@@ -234,5 +234,34 @@ describe Distribot::Workflow do
       end
     end
   end
+
+  describe '#stubbornly' do
+    context 'when the block' do
+      context 'raises an error' do
+        it 'keeps trying forever, until it stops raising an error' do
+          @return_value = SecureRandom.uuid
+          workflow = described_class.new
+          @max_tries = 3
+          @total_tries = 0
+          expect(workflow).to receive(:warn).exactly(3).times
+          expect(workflow.stubbornly(:foo){
+            if @total_tries >= @max_tries
+              @return_value
+            else
+              @total_tries += 1
+              raise NoMethodError.new
+            end
+          }).to eq @return_value
+        end
+      end
+      context 'does not raise an error' do
+        it 'returns the result of the block' do
+          @return_value = SecureRandom.uuid
+          workflow = described_class.new
+          expect(workflow.stubbornly(:foo){ @return_value }).to eq @return_value
+        end
+      end
+    end
+  end
 end
 
