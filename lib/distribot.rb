@@ -56,7 +56,8 @@ module Distribot
   end
 
   def self.bunny_channel(topic)
-    @@channel['topic'] ||= bunny.create_channel
+    key = Process.pid.to_s + ':' + Thread.current.to_s
+    @@channel[key] ||= bunny.create_channel
   end
 
   def self.redis
@@ -89,9 +90,20 @@ module Distribot
     ch = bunny_channel(queue_name)
     ch.prefetch(1)
     queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
+    reenqueue_on_failure = options.delete :reenqueue_on_failure
     queue_obj.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
-      block.call(JSON.parse(payload, symbolize_names: true))
-      ch.acknowledge(delivery_info.delivery_tag, false)
+      begin
+        block.call(JSON.parse(payload, symbolize_names: true))
+        ch.acknowledge(delivery_info.delivery_tag, false)
+      rescue StandardError => e
+        warn "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
+        if reenqueue_on_failure
+          ch = bunny_channel(queue_name)
+          ch.basic_reject(delivery_info.delivery_tag, true)
+        else
+          raise e
+        end
+      end
     end
   end
 
@@ -107,7 +119,11 @@ module Distribot
     my_queue = ch.queue('', exclusive: true, auto_delete: true)
     x = ch.fanout("distribot.fanout.#{topic}")
     my_queue.bind(x).subscribe(options) do |delivery_info, properties, payload|
-      block.call(JSON.parse(payload, symbolize_names: true))
+      begin
+        block.call(JSON.parse(payload, symbolize_names: true))
+      rescue StandardError => e
+        warn "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
+      end
     end
   end
 

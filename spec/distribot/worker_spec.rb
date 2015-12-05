@@ -193,7 +193,7 @@ end
       end
       it 'subscribes to the task queue for this $workflow.$phase.$handler so it can consume them, and stores the consumer for cancelation later' do
         worker = @class_ref.new
-        expect(Distribot).to receive(:subscribe).with(@message[:task_queue]) do |&block|
+        expect(Distribot).to receive(:subscribe).with(@message[:task_queue], reenqueue_on_failure: true) do |&block|
           'fake-consumer'
         end
         worker.subscribe_to_task_queue(@message)
@@ -201,7 +201,7 @@ end
       end
       context 'when it receives a task to work on' do
         before do
-          expect(Distribot).to receive(:subscribe).with(@message[:task_queue]) do |&block|
+          expect(Distribot).to receive(:subscribe).with(@message[:task_queue], reenqueue_on_failure: true) do |&block|
             @callback = block
           end
         end

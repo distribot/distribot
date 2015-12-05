@@ -57,7 +57,7 @@ module Distribot
         end
 
         def subscribe_to_task_queue(message)
-          consumer = Distribot.subscribe(message[:task_queue]) do |task|
+          consumer = Distribot.subscribe(message[:task_queue], reenqueue_on_failure: true) do |task|
             context = OpenStruct.new(
               workflow_id: message[:workflow_id],
               phase: message[:phase],
