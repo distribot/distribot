@@ -1,7 +1,6 @@
 
 require 'active_support/core_ext/object'
 require 'active_support/json'
-require 'bunny'
 require 'redis'
 
 require 'distribot/workflow'
@@ -14,13 +13,13 @@ require 'distribot/task_finished_handler'
 require 'distribot/handler_finished_handler'
 require 'distribot/phase_finished_handler'
 require 'distribot/workflow_finished_handler'
+require 'distribot/connector'
 
 module Distribot
 
   @@config = OpenStruct.new()
   @@did_configure = false
-  @@bunnies = { }
-  @@channel = {}
+  @@connector = nil
 
   def self.configure(&block)
     @@did_configure = true
@@ -28,6 +27,10 @@ module Distribot
     # Now set defaults for things that aren't defined:
     configuration.redis_prefix ||= 'distribot'
     configuration.queue_prefix ||= 'distribot'
+  end
+
+  def self.connector
+    @@connector ||= BunnyConnector.new(configuration.rabbitmq_url)
   end
 
   def self.configuration
@@ -40,24 +43,8 @@ module Distribot
     @@config
   end
 
-  def self.bunny
-    key = Process.pid.to_s + ':' + Thread.current.to_s
-    if @@bunnies.has_key?(key)
-      return @@bunnies[key]
-    else
-      thread_bunny = @@bunnies[key] = Bunny.new( configuration.rabbitmq_url )
-      thread_bunny.start
-      return thread_bunny
-    end
-  end
-
   def self.queue_exists?(name)
-    bunny.queue_exists?(name)
-  end
-
-  def self.bunny_channel(topic)
-    key = Process.pid.to_s + ':' + Thread.current.to_s
-    @@channel[key] ||= bunny.create_channel
+    connector.queue_exists?(name)
   end
 
   def self.redis
@@ -77,53 +64,27 @@ module Distribot
     "#{configuration.redis_prefix}-#{type}:#{id}"
   end
 
-  def self.queue(name)
-    bunny_channel(name).queue(name, auto_delete: true, durable: true)
+  def self.publish!(topic, data)
+puts "#{self} -> publish(#{topic}, #{data})"
+    connector.publish(topic, data)
   end
 
-  def self.publish!(queue_name, data)
-    queue_obj = queue(queue_name)
-    bunny_channel(name).default_exchange.publish data.to_json, routing_key: queue_name
-  end
-
-  def self.subscribe(queue_name, options={}, &block)
-    ch = bunny_channel(queue_name)
-    ch.prefetch(1)
-    queue_obj = ch.queue(queue_name, auto_delete: true, durable: true)
-    reenqueue_on_failure = options.delete :reenqueue_on_failure
-    queue_obj.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
-      begin
-        block.call(JSON.parse(payload, symbolize_names: true))
-        ch.acknowledge(delivery_info.delivery_tag, false)
-      rescue StandardError => e
-        warn "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
-        if reenqueue_on_failure
-          ch = bunny_channel(queue_name)
-          ch.basic_reject(delivery_info.delivery_tag, true)
-        else
-          raise e
-        end
-      end
+  def self.subscribe(topic, options={}, &block)
+puts "#{self} -> subscribe(#{topic})"
+    connector.subscribe(topic, options) do |message|
+      block.call( message )
     end
   end
 
   def self.broadcast!(topic, data)
-    ch = bunny_channel(name)
-    x = ch.fanout("distribot.fanout.#{topic}")
-    x.publish(data.to_json, routing_key: topic)
+puts "#{self} -> broadcast(#{topic}, #{data})"
+    connector.broadcast(topic, data)
   end
 
   def self.subscribe_multi(topic, options={}, &block)
-    ch = bunny_channel(name)
-    ch.prefetch(1)
-    my_queue = ch.queue('', exclusive: true, auto_delete: true)
-    x = ch.fanout("distribot.fanout.#{topic}")
-    my_queue.bind(x).subscribe(options) do |delivery_info, properties, payload|
-      begin
-        block.call(JSON.parse(payload, symbolize_names: true))
-      rescue StandardError => e
-        warn "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
-      end
+puts "#{self} -> subscribe_multi(#{topic})"
+    connector.subscribe_multi(topic, options) do |message|
+      block.call( message )
     end
   end
 

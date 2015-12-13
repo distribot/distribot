@@ -1,4 +1,3 @@
-#!/usr/bin/env ruby
 
 require 'pp'
 require 'securerandom'
@@ -6,7 +5,7 @@ require 'bunny'
 require 'byebug'
 require 'active_support/json'
 
-module QQ
+module Distribot
 
   class Connector
     attr_accessor :connection_args, :bunny, :channel
@@ -41,7 +40,6 @@ module QQ
           self.channel.basic_reject(delivery_info.delivery_tag, true)
         end
       end
-      self
     end
 
     def cancel
@@ -55,16 +53,16 @@ module QQ
       private_queue = self.channel.queue('', exclusive: true, auto_delete: true)
       exchange = self.channel.fanout(topic)
       private_queue.bind(exchange).subscribe(options) do |delivery_info, properties, payload|
-      begin
-        block.call(JSON.parse(payload, symbolize_names: true))
-      rescue StandardError => e
-        puts "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
-      end
+        begin
+          block.call(JSON.parse(payload, symbolize_names: true))
+        rescue StandardError => e
+          puts "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
+        end
       end
     end
   end
 
-  class Client < Connector
+  class BunnyConnector < Connector
     attr_accessor :subscribers, :multi_subscribers
     def initialize(*args)
       super(*args)
@@ -81,14 +79,14 @@ module QQ
 
     def subscribe(topic, options={}, &block)
       subscriber = Subscription.new(self.bunny)
-      self.subscribers << subscriber.start(topic, options) do |message|
+      subscriber.start(topic, options) do |message|
         block.call( message )
       end
     end
 
     def subscribe_multi(topic, options={}, &block)
       subscriber = MultiSubscription.new(self.bunny)
-      self.multi_subscribers << subscriber.start(topic, options) do |message|
+      subscriber.start(topic, options) do |message|
         block.call( message )
       end
     end
@@ -104,43 +102,3 @@ module QQ
     end
   end
 end
-
-qq = QQ::Client.new({})
-
-MAX_WORKERS = ARGV.shift.to_i
-MAX_MESSAGES = ARGV.shift.to_i
-
-MAX_WORKERS.times do |worker_id|
-  qq.subscribe('foo') do |msg|
-    latency = Time.now.to_f - msg[:published_at]
-    puts "GOT SINGLE ##{worker_id} #{msg[:message]} latency:#{latency.round(3)} sec since #{msg[:published_at]}"
-    sleep rand / 10
-  end
-
-  qq.subscribe_multi('hotline') do |msg|
-    latency = Time.now.to_f - msg[:published_at]
-    puts "GOT MULTI ##{worker_id} #{msg[:message]} latency:#{latency.round(3)} sec since #{msg[:published_at]}"
-    sleep rand / 10
-  end
-end
-
-#MAX_MESSAGES.times do |n|
-batch = 0
-while true do
-  100.times do |item|
-    qq.publish('foo', {hello: "world", message: "#{batch}.#{item}", published_at: Time.now.to_f})
-    if item % 10 == 0
-      qq.broadcast('hotline', {hello: "world", message: "#{batch}.#{item}", published_at: Time.now.to_f})
-    end
-  end
-  batch += 1
-  # puts "-------------------------------------------------- SLEEP ---------------------"
-  sleep 0.2
-end
-
-sleep
-
-
-
-
-
