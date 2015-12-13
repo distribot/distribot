@@ -31,15 +31,12 @@ module Distribot
           workflow_id: self.id
         }
         if block_given?
-          self.finished_callback_queue = "distribot.workflow.#{self.id}.finished.callback"
-          self.consumer = stubbornly :subscribe do
-            Distribot.subscribe(self.finished_callback_queue) do |message|
-              block.call(message)
-              if self.consumer
-                begin
-                  Distribot.cancel_consumers_for(self.finished_callback_queue, close: true)
-                rescue
-                end
+          Thread.new do
+            while true do
+              sleep 1
+              if self.finished?
+                block.call( workflow_id: self.id )
+                break
               end
             end
           end
@@ -85,7 +82,7 @@ module Distribot
     def transitions
       redis.smembers(self.redis_id + ':transitions').map do |item|
         OpenStruct.new JSON.parse(item, symbolize_names: true)
-      end
+      end.sort_by(&:timestamp)
     end
 
     def current_phase
@@ -95,6 +92,10 @@ module Distribot
     def next_phase
       current = self.current_phase
       self.phases.find{|x| x.name == current }.transitions_to
+    end
+
+    def finished?
+      self.phase( self.transitions.last.to ).is_final
     end
 
     def stubbornly task, &block

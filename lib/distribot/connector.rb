@@ -22,14 +22,48 @@ module Distribot
     attr_accessor :bunny, :channel
     def initialize(bunny)
       self.bunny = bunny
+      @channel = nil
     end
 
     def channel
-      @channel ||= bunny.create_channel
+      if @channel.nil?
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "****************************CHANNEL***************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+puts "**************************************************************************"
+        @channel = bunny.create_channel
+      end
+      @channel
     end
 
     def cancel
-      warn "))) Canceling for #{self.queue.name} ((("
+      warn "))) Canceling for #{self.queue.name} #{self.consumer} ((("
       begin
         self.consumer.cancel
         warn "((( Canceled )))"
@@ -39,7 +73,7 @@ module Distribot
     end
 
     def close
-warn "Closing channel for #{self.queue.name}"
+warn "Closing channel for #{self} - #{self.channel}"
 begin
       self.channel.close
 rescue StandardError => e
@@ -83,14 +117,17 @@ end
   end
 
   class BunnyConnector < Connector
-    attr_accessor :subscribers, :multi_subscribers
+    attr_accessor :subscribers, :multi_subscribers, :channel
     def initialize(*args)
       super(*args)
       self.subscribers = [ ]
       self.multi_subscribers = [ ]
       self.bunny = Bunny.new(self.connection_args)
       self.bunny.start
-      self.channel = self.bunny.create_channel
+    end
+
+    def channel
+      @channel ||= self.bunny.create_channel
     end
 
     def queue_exists?(topic)
@@ -104,13 +141,6 @@ end
       end
     end
 
-    def subscribe_multi(topic, options={}, &block)
-      subscriber = MultiSubscription.new(self.bunny)
-      self.subscribers << subscriber.start(topic, options) do |message|
-        block.call( message )
-      end
-    end
-
     def publish(topic, message)
       queue = stubbornly :get_queue do
         self.channel.queue(topic, auto_delete: true, durable: true)
@@ -118,18 +148,19 @@ end
       self.channel.default_exchange.publish message.to_json, routing_key: topic
     end
 
-    def broadcast(topic, message)
-      exchange = self.channel.fanout(topic)
-      exchange.publish(message.to_json, routing_key: topic)
-    end
-
     def cancel_consumers_for(topic, options={})
+puts "WANNA CANCEL FOR #{topic} from #{self.subscribers}"
       gonners = self.subscribers.select{|x| x.queue.name == topic}
-puts "cancel(#{topic}) -- #{gonners.map{|x| x.queue.name}.sort }" unless gonners.empty?
+puts "cancel(#{topic}) -- #{gonners.map{|x| x.queue.name}.sort } with options(#{options})" unless gonners.empty?
       self.subscribers -= gonners
       gonners.uniq{|x| x.queue.name }.map do |consumer|
-        consumer.cancel
-        if options[:close]
+        begin
+          consumer.cancel
+        rescue StandardError => e
+          puts "ERROR: #{e} -- #{e.backtrace.join("\n")}"
+        end
+
+        if options[:close] || topic =~ /\.finished\.callback$/
           puts "//////// CLOSING: #{topic}"
           consumer.close
         end

@@ -24,8 +24,8 @@ class SimpleWorker
   def enumerate(context, &callback)
     jobs = [ ]
 
-    1.times do |chunk|
-      max = 1
+    2.times do |chunk|
+      max = 10
       jobs << (1..max).to_a.map{|n| {id: SecureRandom.uuid, args: [chunk, n] } }
     end
 #sleep 0.5
