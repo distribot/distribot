@@ -32,10 +32,6 @@ module Distribot
     @@connector ||= BunnyConnector.new(configuration.rabbitmq_url)
   end
 
-  def self.reconnect
-    @@connector = BunnyConnector.new(configuration.rabbitmq_url)
-  end
-
   def self.configuration
     unless @@did_configure
       self.configure do |config|
