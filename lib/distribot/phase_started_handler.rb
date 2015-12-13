@@ -20,7 +20,6 @@ module Distribot
           task_queue = "distribot.workflow.#{handler}.tasks"
           finished_queue = "distribot.workflow.task.finished"
           task_counter = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.finished"
-          cancel_consumer_queue = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.cancel-consumers"
 
           Distribot.publish! enumerate_queue, {
             workflow_id: workflow.id,

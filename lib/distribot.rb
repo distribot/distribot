@@ -2,7 +2,6 @@
 require 'active_support/core_ext/object'
 require 'active_support/json'
 require 'redis'
-
 require 'distribot/workflow'
 require 'distribot/phase'
 require 'distribot/handler'
@@ -69,31 +68,21 @@ module Distribot
   end
 
   def self.publish!(topic, data)
-puts "publish(#{topic}, #{data})"
     connector.publish(topic, data)
   end
 
   def self.subscribe(topic, options={}, &block)
-puts "subscribe(#{topic})"
     connector.subscribe(topic, options) do |message|
-puts "received(#{topic}: #{message})"
       block.call( message )
     end
   end
 
   def self.broadcast!(topic, data)
-puts "broadcast(#{topic}, #{data})"
     connector.broadcast(topic, data)
   end
 
-  def self.cancel_consumers_for(topic, options={})
-    connector.cancel_consumers_for(topic, options)
-  end
-
   def self.subscribe_multi(topic, options={}, &block)
-puts "subscribe_multi(#{topic})"
     connector.subscribe_multi(topic, options) do |message|
-puts "received_multi(#{topic}: #{message})"
       block.call( message )
     end
   end
