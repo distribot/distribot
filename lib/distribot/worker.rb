@@ -36,8 +36,12 @@ module Distribot
           end
         end
 
+        def self.task_queue
+          "distribot.workflow.#{self.class}.tasks"
+        end
+
         def subscribe_to_task_queue
-          Distribot.subscribe("distribot.workflow.#{self.class}.tasks", reenqueue_on_failure: true) do |task|
+          Distribot.subscribe(self.class.task_queue, reenqueue_on_failure: true) do |task|
             context = OpenStruct.new(
               workflow_id: task[:workflow_id],
               phase: task[:phase],
