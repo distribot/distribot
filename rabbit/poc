@@ -50,8 +50,17 @@ module QQ
     end
   end
 
-  class MultiSubscription < Connector
+  class MultiSubscription < ConnectionSharer
     def start(topic, options={}, &block)
+      private_queue = self.channel.queue('', exclusive: true, auto_delete: true)
+      exchange = self.channel.fanout(topic)
+      private_queue.bind(exchange).subscribe(options) do |delivery_info, properties, payload|
+      begin
+        block.call(JSON.parse(payload, symbolize_names: true))
+      rescue StandardError => e
+        puts "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
+      end
+      end
     end
   end
 
@@ -74,6 +83,10 @@ module QQ
     end
 
     def subscribe_multi(topic, options={}, &block)
+      subscriber = MultiSubscription.new(self.bunny)
+      self.multi_subscribers << subscriber.start(topic, options) do |message|
+        block.call( message )
+      end
     end
 
     def publish(topic, message)
@@ -82,6 +95,8 @@ module QQ
     end
 
     def broadcast(topic, message)
+      exchange = self.channel.fanout(topic)
+      exchange.publish(message.to_json, routing_key: topic)
     end
   end
 end
@@ -116,7 +131,7 @@ while true do
   end
   batch += 1
   # puts "-------------------------------------------------- SLEEP ---------------------"
-  sleep 2
+  sleep 0.2
 end
 
 sleep
