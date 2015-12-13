@@ -23,14 +23,17 @@ module QQ
     attr_accessor :bunny, :channel
     def initialize(bunny)
       self.bunny = bunny
-      self.channel = self.bunny.create_channel
+    end
+
+    def channel
+      @channel ||= bunny.create_channel
     end
   end
 
   class Subscription < ConnectionSharer
-    attr_accessor :consumer
+    attr_accessor :consumer, :queue
     def start(topic, options={}, &block)
-      queue = self.channel.queue(topic, auto_delete: true, durable: true)
+      self.queue = self.channel.queue(topic, auto_delete: true, durable: true)
       self.consumer = queue.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
         begin
           parsed_message = JSON.parse(payload, symbolize_names: true)
@@ -45,31 +48,59 @@ module QQ
     end
 
     def cancel
-      self.consumer.cancel
+      warn "))) Closing ((("
+      begin
+        self.consumer.cancel
+        warn "((( Closed )))"
+      rescue StandardError => e
+          puts "Error #{e}  --- #{e.backtrace.join("\n")}"
+      end
+warn "Closing channel"
+begin
       self.channel.close
+rescue StandardError => e
+  puts "/////// Cannot close channel: #{e} --- #{e.backtrace.join("\n")}"
+end
     end
   end
 
   class MultiSubscription < ConnectionSharer
+    attr_accessor :consumer, :queue
     def start(topic, options={}, &block)
-      private_queue = self.channel.queue('', exclusive: true, auto_delete: true)
+      self.queue = self.channel.queue('', exclusive: true, auto_delete: true)
       exchange = self.channel.fanout(topic)
-      private_queue.bind(exchange).subscribe(options) do |delivery_info, properties, payload|
-      begin
-        block.call(JSON.parse(payload, symbolize_names: true))
-      rescue StandardError => e
-        puts "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
+      self.consumer = queue.bind(exchange).subscribe(options) do |delivery_info, properties, payload|
+        begin
+          block.call(JSON.parse(payload, symbolize_names: true))
+        rescue StandardError => e
+          puts "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
+        end
       end
-      end
+      self
+    end
+
+    def cancel
+warn "Canceling consumer!!!"
+#byebug
+begin
+      self.consumer.cancel
+rescue StandardError => e
+  puts "/////// Cannot cancel consumer: #{e} --- #{e.backtrace.join("\n")}"
+end
+warn "Closing channel"
+begin
+      self.channel.close
+rescue StandardError => e
+  puts "/////// Cannot close channel: #{e} --- #{e.backtrace.join("\n")}"
+end
     end
   end
 
-  class Client < Connector
-    attr_accessor :subscribers, :multi_subscribers
+  class BunnyConnector < Connector
+    attr_accessor :subscribers
     def initialize(*args)
       super(*args)
       self.subscribers = [ ]
-      self.multi_subscribers = [ ]
       self.bunny = Bunny.new(self.connection_args)
       self.bunny.start
       self.channel = self.bunny.create_channel
@@ -88,13 +119,15 @@ module QQ
 
     def subscribe_multi(topic, options={}, &block)
       subscriber = MultiSubscription.new(self.bunny)
-      self.multi_subscribers << subscriber.start(topic, options) do |message|
+      self.subscribers << subscriber.start(topic, options) do |message|
         block.call( message )
       end
     end
 
     def publish(topic, message)
-      queue = self.channel.queue(topic, auto_delete: true, durable: true)
+      queue = stubbornly :get_queue do
+        self.channel.queue(topic, auto_delete: true, durable: true)
+      end
       self.channel.default_exchange.publish message.to_json, routing_key: topic
     end
 
@@ -102,24 +135,67 @@ module QQ
       exchange = self.channel.fanout(topic)
       exchange.publish(message.to_json, routing_key: topic)
     end
+
+    def cancel_consumers_for(topic)
+puts "cancel(#{topic}) -- #{self.subscribers.map{|x| x.queue.name}.sort }"
+      gonners = self.subscribers.select{|x| x.queue.name == topic}
+      self.subscribers -= gonners
+      gonners.uniq{|x| x.queue.name }.map do |consumer|
+        consumer.cancel
+      end
+    end
+
+    private
+    def stubbornly task, &block
+      result = nil
+      while true do
+        begin
+          result = block.call
+          break
+        rescue Timeout::Error => e
+          warn "Connection timed out during '#{task}' - retrying in 1sec..."
+          sleep 1
+          next
+        end
+      end
+      result
+    end
   end
 end
 
-qq = QQ::Client.new({})
+
+qq = QQ::BunnyConnector.new({})
 
 MAX_WORKERS = ARGV.shift.to_i
 MAX_MESSAGES = ARGV.shift.to_i
+consumers = [ ]
+
+# def cancel_consumers_for(finished_queue)
+#   gonners = consumers.select{|x| x.queue.name == finished_queue}
+#   self.consumers -= gonners
+#   gonners.uniq{|x| x.queue.name }.map do |consumer|
+#     consumer.cancel
+#   end
+# end
+
+qq.subscribe_multi('cancelation') do |msg|
+  qq.cancel_consumers_for(msg[:queue])
+end
 
 MAX_WORKERS.times do |worker_id|
   qq.subscribe('foo') do |msg|
     latency = Time.now.to_f - msg[:published_at]
-    puts "GOT SINGLE ##{worker_id} #{msg[:message]} latency:#{latency.round(3)} sec since #{msg[:published_at]}"
+#    puts "GOT SINGLE ##{worker_id} #{msg[:message]} latency:#{latency.round(3)} sec since #{msg[:published_at]}"
     sleep rand / 10
   end
 
   qq.subscribe_multi('hotline') do |msg|
     latency = Time.now.to_f - msg[:published_at]
-    puts "GOT MULTI ##{worker_id} #{msg[:message]} latency:#{latency.round(3)} sec since #{msg[:published_at]}"
+puts "subscribe(#{msg[:tasks]})"
+#    puts "GOT MULTI ##{worker_id} #{msg[:message]} latency:#{latency.round(3)} sec since #{msg[:published_at]}"
+    qq.subscribe(msg[:tasks]) do |msg|
+      puts "YAY: #{msg}"
+    end
     sleep rand / 10
   end
 end
@@ -130,7 +206,11 @@ while true do
   100.times do |item|
     qq.publish('foo', {hello: "world", message: "#{batch}.#{item}", published_at: Time.now.to_f})
     if item % 10 == 0
-      qq.broadcast('hotline', {hello: "world", message: "#{batch}.#{item}", published_at: Time.now.to_f})
+      qq.broadcast('hotline', {hello: "world", message: "#{batch}.#{item}", published_at: Time.now.to_f, tasks: "task_channel_#{batch}.#{item}"})
+      Thread.new do
+        sleep 0.1
+        qq.broadcast('cancelation', queue: "task_channel_#{batch}.#{item}")
+      end.join
     end
   end
   batch += 1

@@ -31,7 +31,7 @@ module Distribot
 
         def run
           self.prepare_for_enumeration
-          self.prepare_for_consumer_cancelation
+#          self.prepare_for_consumer_cancelation
           self.prepare_for_task_processing
           self
         end
@@ -44,7 +44,7 @@ module Distribot
 
         def prepare_for_consumer_cancelation
           Distribot.subscribe_multi( 'distribot.cancel.consumer' ) do |cancel_message|
-            self.cancel_consumers_for(cancel_message[:task_queue])
+            Distribot.cancel_consumers_for(cancel_message[:task_queue], close: true)
           end
         end
 
@@ -64,7 +64,8 @@ module Distribot
               finished_queue: message[:finished_queue],
             )
             self.process_single_task(context, task)
-          end
+          end.last
+puts "Consumer:(#{consumer}) -> .queue.name: '#{consumer.queue.name}'"
           @semaphore.synchronize do
             self.task_consumers << consumer
           end
@@ -75,6 +76,7 @@ module Distribot
           self.send(self.class.processor, context, task)
 
           # Now tell the world we finished this task:
+puts "Announcing task finished: '#{context.finished_queue}'"
           Distribot.publish! context.finished_queue, {
             workflow_id: context.workflow_id,
             phase: context.phase,
@@ -85,10 +87,11 @@ module Distribot
         def enumerate_tasks(message)
           context = OpenStruct.new(message)
           self.send(self.class.enumerator, context) do |tasks|
-            task_queue = message[:task_queue]
-            Distribot.redis.incrby task_queue, tasks.count
+            task_counter = message[:task_counter]
+ new_val =            Distribot.redis.incrby task_counter, tasks.count
+puts "TASK_COUNTER_____(#{task_counter}) increased by #{tasks.count} -> #{new_val}"
             tasks.each do |task|
-              Distribot.publish! task_queue, task
+              Distribot.publish! message[:task_queue], task
             end
           end
 
@@ -99,18 +102,6 @@ module Distribot
             finished_queue: message[:finished_queue],
             handler: self.class.to_s
           }
-        end
-
-        def cancel_consumers_for(task_queue)
-          gonners = self.consumers_of_queue(task_queue)
-          unless gonners.empty?
-            @semaphore.synchronize do
-              gonners.each do |gonner|
-                gonner.cancel
-              end
-              @task_consumers -= gonners
-            end
-          end
         end
 
         def currently_subscribed_to_task_queue?(task_queue)

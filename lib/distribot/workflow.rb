@@ -37,7 +37,7 @@ module Distribot
               block.call(message)
               if self.consumer
                 begin
-                  self.consumer.cancel
+                  Distribot.cancel_consumers_for(self.finished_callback_queue, close: true)
                 rescue
                 end
               end

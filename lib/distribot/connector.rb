@@ -22,14 +22,36 @@ module Distribot
     attr_accessor :bunny, :channel
     def initialize(bunny)
       self.bunny = bunny
-      self.channel = self.bunny.create_channel
+    end
+
+    def channel
+      @channel ||= bunny.create_channel
+    end
+
+    def cancel
+      warn "))) Canceling for #{self.queue.name} ((("
+      begin
+        self.consumer.cancel
+        warn "((( Canceled )))"
+      rescue StandardError => e
+          puts "Error #{e}  --- #{e.backtrace.join("\n")}"
+      end
+    end
+
+    def close
+warn "Closing channel for #{self.queue.name}"
+begin
+      self.channel.close
+rescue StandardError => e
+  puts "/////// Cannot close channel: #{e} --- #{e.backtrace.join("\n")}"
+end
     end
   end
 
   class Subscription < ConnectionSharer
-    attr_accessor :consumer
+    attr_accessor :consumer, :queue
     def start(topic, options={}, &block)
-      queue = self.channel.queue(topic, auto_delete: true, durable: true)
+      self.queue = self.channel.queue(topic, auto_delete: true, durable: true)
       self.consumer = queue.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
         begin
           parsed_message = JSON.parse(payload, symbolize_names: true)
@@ -40,25 +62,23 @@ module Distribot
           self.channel.basic_reject(delivery_info.delivery_tag, true)
         end
       end
-    end
-
-    def cancel
-      self.consumer.cancel
-      self.channel.close
+      self
     end
   end
 
   class MultiSubscription < ConnectionSharer
+    attr_accessor :consumer, :queue
     def start(topic, options={}, &block)
-      private_queue = self.channel.queue('', exclusive: true, auto_delete: true)
+      self.queue = self.channel.queue('', exclusive: true, auto_delete: true)
       exchange = self.channel.fanout(topic)
-      private_queue.bind(exchange).subscribe(options) do |delivery_info, properties, payload|
+      self.consumer = queue.bind(exchange).subscribe(options) do |delivery_info, properties, payload|
         begin
           block.call(JSON.parse(payload, symbolize_names: true))
         rescue StandardError => e
           puts "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
         end
       end
+      self
     end
   end
 
@@ -79,14 +99,14 @@ module Distribot
 
     def subscribe(topic, options={}, &block)
       subscriber = Subscription.new(self.bunny)
-      subscriber.start(topic, options) do |message|
+      self.subscribers << subscriber.start(topic, options) do |message|
         block.call( message )
       end
     end
 
     def subscribe_multi(topic, options={}, &block)
       subscriber = MultiSubscription.new(self.bunny)
-      subscriber.start(topic, options) do |message|
+      self.subscribers << subscriber.start(topic, options) do |message|
         block.call( message )
       end
     end
@@ -103,6 +123,19 @@ module Distribot
       exchange.publish(message.to_json, routing_key: topic)
     end
 
+    def cancel_consumers_for(topic, options={})
+      gonners = self.subscribers.select{|x| x.queue.name == topic}
+puts "cancel(#{topic}) -- #{gonners.map{|x| x.queue.name}.sort }" unless gonners.empty?
+      self.subscribers -= gonners
+      gonners.uniq{|x| x.queue.name }.map do |consumer|
+        consumer.cancel
+        if options[:close]
+          puts "//////// CLOSING: #{topic}"
+          consumer.close
+        end
+      end
+    end
+
     private
     def stubbornly task, &block
       result = nil
@@ -111,7 +144,7 @@ module Distribot
           result = block.call
           break
         rescue Timeout::Error => e
-#          warn "Error during #{task}: #{e} --- #{e.backtrace.join("\n")}"
+          warn "Connection timed out during '#{task}' - retrying in 1sec..."
           sleep 1
           next
         end
