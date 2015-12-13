@@ -65,24 +65,24 @@ module Distribot
   end
 
   def self.publish!(topic, data)
-puts "#{self} -> publish(#{topic}, #{data})"
+#puts "#{self} -> publish(#{topic}, #{data})"
     connector.publish(topic, data)
   end
 
   def self.subscribe(topic, options={}, &block)
-puts "#{self} -> subscribe(#{topic})"
+#puts "#{self} -> subscribe(#{topic})"
     connector.subscribe(topic, options) do |message|
       block.call( message )
     end
   end
 
   def self.broadcast!(topic, data)
-puts "#{self} -> broadcast(#{topic}, #{data})"
+#puts "#{self} -> broadcast(#{topic}, #{data})"
     connector.broadcast(topic, data)
   end
 
   def self.subscribe_multi(topic, options={}, &block)
-puts "#{self} -> subscribe_multi(#{topic})"
+#puts "#{self} -> subscribe_multi(#{topic})"
     connector.subscribe_multi(topic, options) do |message|
       block.call( message )
     end

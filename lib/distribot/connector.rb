@@ -92,13 +92,31 @@ module Distribot
     end
 
     def publish(topic, message)
-      queue = self.channel.queue(topic, auto_delete: true, durable: true)
+      queue = stubbornly :get_queue do
+        self.channel.queue(topic, auto_delete: true, durable: true)
+      end
       self.channel.default_exchange.publish message.to_json, routing_key: topic
     end
 
     def broadcast(topic, message)
       exchange = self.channel.fanout(topic)
       exchange.publish(message.to_json, routing_key: topic)
+    end
+
+    private
+    def stubbornly task, &block
+      result = nil
+      while true do
+        begin
+          result = block.call
+          break
+        rescue Timeout::Error => e
+#          warn "Error during #{task}: #{e} --- #{e.backtrace.join("\n")}"
+          sleep 1
+          next
+        end
+      end
+      result
     end
   end
 end
