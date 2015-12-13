@@ -31,7 +31,6 @@ module Distribot
       end
       @channel
     end
-
   end
 
   class Subscription < ConnectionSharer
