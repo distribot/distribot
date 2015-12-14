@@ -62,10 +62,12 @@ module Distribot
     def save!(&block)
       self.id = SecureRandom.uuid
       record_id = self.redis_id + ':definition'
-      is_new = redis.keys(record_id).count <= 0
+      is_new = redis.get(record_id).to_s == ''
       redis.set record_id, serialize
+      redis.sadd 'distribot.workflows.active', self.id
 
       if is_new
+        self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
         Distribot.publish! 'distribot.workflow.created', {
           workflow_id: self.id
         }
@@ -80,7 +82,6 @@ module Distribot
             end
           end
         end
-        self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
       end
     end
 
