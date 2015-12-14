@@ -2,5 +2,5 @@
 
 require 'distribot'
 
-Distribot::HandlerFinishedHandler.new
+puts Distribot::HandlerFinishedHandler.new
 sleep

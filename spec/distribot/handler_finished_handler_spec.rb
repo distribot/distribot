@@ -39,9 +39,6 @@ describe Distribot::HandlerFinishedHandler do
             workflow_id: @message[:workflow_id],
             phase: 'phase1'
           })
-          expect(Distribot).to receive(:broadcast!).with('distribot.cancel.consumer', {
-            task_queue: @message[:task_queue]
-          })
 
           # Finally:
           @handler.callback(@message)

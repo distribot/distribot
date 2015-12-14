@@ -65,23 +65,6 @@ describe Distribot::Workflow do
         expect(@workflow).to receive(:current_phase){ 'phase1' }
         expect(@workflow).to receive(:add_transition).with(hash_including(to: 'phase1'))
       end
-      it 'saves it, then subscribes to the workflow\'s finished.callback queue' do
-        callback_queue = "distribot.workflow.#{@id}.finished.callback"
-        expect(Distribot).to receive(:subscribe).with(callback_queue) do |&block|
-          @callback = block
-        end
-
-        # We didn't set the workflow's consumer when it subscribed, so do it here:
-        consumer = double('consumer')
-        expect(consumer).to receive(:cancel)
-        expect(@workflow).to receive(:consumer).exactly(2).times{ consumer }
-
-        # Finally - action:
-        @workflow.save! do |workflow|
-        end
-        expect(@workflow.id).to eq @id
-        @callback.call({})
-      end
     end
     context 'when no callback is provided' do
       before do

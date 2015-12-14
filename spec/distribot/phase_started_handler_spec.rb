@@ -55,23 +55,16 @@ describe Distribot::PhaseStartedHandler do
 
           enumerate_queue = 'distribot.workflow.handler.FooHandler.enumerate'
           process_queue = 'distribot.workflow.handler.FooHandler.process'
-          task_queue = 'distribot.workflow.' + @workflow.id + '.phase1.FooHandler.tasks'
-          finished_queue = 'distribot.workflow.' + @workflow.id + '.phase1.FooHandler.finished'
-          cancel_consumer_queue = 'distribot.workflow.' + @workflow.id + '.phase1.FooHandler.cancel-consumers'
+          task_queue = 'distribot.workflow.FooHandler.tasks'
+          finished_queue = 'distribot.workflow.task.finished'
+          task_counter = 'distribot.workflow.' + @workflow.id + '.phase1.FooHandler.finished'
 
           expect(Distribot).to receive(:publish!).with(enumerate_queue, {
             task_queue: task_queue,
             workflow_id: @workflow.id,
             phase: 'phase1',
-            cancel_consumer_queue: cancel_consumer_queue,
             finished_queue: finished_queue,
-          })
-          expect(Distribot).to receive(:broadcast!).with(process_queue, {
-            task_queue: task_queue,
-            finished_queue: finished_queue,
-            phase: 'phase1',
-            workflow_id: @workflow.id,
-            cancel_consumer_queue: cancel_consumer_queue
+            task_counter: task_counter
           })
         end
         it 'publishes and broadcasts to the correct queues with the correct params' do

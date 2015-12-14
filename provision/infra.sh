@@ -4,27 +4,23 @@ set -e
 
 sudo apt-get -y update
 sudo apt-get -y autoremove
-sudo apt-get install -y ruby2.0 ruby2.0-dev build-essential git redis-server wget vim python
-sudo ln -sf /usr/bin/ruby2.0 /usr/bin/ruby && sudo ln -sf /usr/bin/gem2.0 /usr/bin/gem
+sudo apt-get install -y ruby2.0 ruby2.0-dev build-essential git wget vim
 
-sudo cat <<EOF | sudo tee -a /etc/redis/redis.conf
-bind 0.0.0.0
-EOF
-
-sudo service redis-server restart
-
-if ! gem list | grep bundler; then
-  sudo gem install bundler --no-ri --no-rdoc
+if [ -f /etc/init.d/redis-server ]; then
+  echo 'redis-server already installed'
+else
+  sudo apt-get install -y redis-server
 fi
 
-# Don't fail because we haven't added github.com's ssh key to our known_hosts:
-cat <<EOF | sudo tee -a /etc/ssh/ssh_config > /dev/null
-Host github.com
-    StrictHostKeyChecking no
+if grep -e "bind 0.0.0.0" /etc/redis/redis.conf; then
+  echo "redis already willing to accept connections on 0.0.0.0"
+else
+  cat <<EOF | sudo tee -a /etc/redis/redis.conf
+bind 0.0.0.0
 EOF
+fi
 
-RABBITMQ_USERNAME=distribot
-RABBITMQ_PASSWORD=distribot
+sudo service redis-server restart
 
 if [ -d /data/rabbitmq ]; then
   echo "directory /data/rabbitmq already exists"
@@ -84,10 +80,3 @@ else
 fi
 sudo wget -O /usr/bin/rabbitmqadmin http://localhost:15672/cli/rabbitmqadmin
 sudo chmod +x /usr/bin/rabbitmqadmin
-
-sudo gem install eye --no-ri --no-rdoc
-
-cd /var/www/distribot
-bundle
-
-
