@@ -1,11 +1,6 @@
 #!/usr/bin/env ruby
 #^syntax detection
 
-# The excellent dotenv gem.
-# See https://github.com/bkeepers/dotenv for details.
-require 'dotenv'
-Dotenv.load
-
 ROOT = File.expand_path('../../', __FILE__)
 
 Eye.config do
@@ -45,11 +40,7 @@ Eye.application :distribot do
       daemonize true
       pid_file "tmp/#{thing}.pid"
       stdall "log/#{thing}.log"
-      if ENV['DEBUG'].to_s == 'true'
-        start_command "bundle exec dotenv bin/distribot.#{thing}"
-      else
-        start_command "dotenv distribot.#{thing}"
-      end
+      start_command "distribot.#{thing}"
       stop_signals [:TERM, 5.seconds, :KILL]
       restart_command "kill -USR2 {PID}"
       restart_grace 10.seconds
