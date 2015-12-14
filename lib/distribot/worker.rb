@@ -37,7 +37,7 @@ module Distribot
         end
 
         def self.task_queue
-          "distribot.workflow.#{self.class}.tasks"
+          "distribot.workflow.#{self}.tasks"
         end
 
         def subscribe_to_task_queue

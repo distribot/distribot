@@ -83,4 +83,10 @@ module Distribot
     end
   end
 
+  def self.logger
+    @@logger ||= Logger.new(STDERR)
+    @@logger.level = ENV['DEBUG'].to_s == 'true' ? Logger::DEBUG : Logger::INFO
+    @@logger
+  end
+
 end

@@ -16,6 +16,10 @@ module Distribot
       self.channel = self.bunny.create_channel
       self.channel.prefetch(1)
     end
+
+    def logger
+      Distribot.logger
+    end
   end
 
   class ConnectionSharer
@@ -31,6 +35,10 @@ module Distribot
       end
       @channel
     end
+
+    def logger
+      Distribot.logger
+    end
   end
 
   class Subscription < ConnectionSharer
@@ -43,7 +51,7 @@ module Distribot
           block.call( parsed_message )
           self.channel.acknowledge(delivery_info.delivery_tag, false)
         rescue StandardError => e
-          puts "ERROR: #{e} -- #{e.backtrace.join("\n")}"
+          logger.error "ERROR: #{e} -- #{e.backtrace.join("\n")}"
           self.channel.basic_reject(delivery_info.delivery_tag, true)
         end
       end
@@ -60,7 +68,7 @@ module Distribot
         begin
           block.call(JSON.parse(payload, symbolize_names: true))
         rescue StandardError => e
-          puts "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
+          logger.error "Error #{e} with #{payload} --- #{e.backtrace.join("\n")}"
         end
       end
       self
@@ -88,6 +96,7 @@ module Distribot
     def subscribe(topic, options={}, &block)
       subscriber = Subscription.new(self.bunny)
       self.subscribers << subscriber.start(topic, options) do |message|
+        logger.debug "received(#{topic} -> #{message})"
         block.call( message )
       end
     end
@@ -95,6 +104,7 @@ module Distribot
     def subscribe_multi(topic, options={}, &block)
       subscriber = MultiSubscription.new(self.bunny)
       self.subscribers << subscriber.start(topic, options) do |message|
+        logger.debug "received-multi(#{topic} -> #{message})"
         block.call( message )
       end
     end
@@ -103,11 +113,13 @@ module Distribot
       queue = stubbornly :get_queue do
         self.channel.queue(topic, auto_delete: true, durable: true)
       end
+      logger.debug "publish(#{topic} -> #{message})"
       self.channel.default_exchange.publish message.to_json, routing_key: topic
     end
 
     def broadcast(topic, message)
       exchange = self.channel.fanout(topic)
+      logger.debug "broadcast(#{topic} -> #{message})"
       exchange.publish(message.to_json, routing_key: topic)
     end
 
@@ -119,7 +131,7 @@ module Distribot
           result = block.call
           break
         rescue Timeout::Error => e
-          warn "Connection timed out during '#{task}' - retrying in 1sec..."
+          logger.error "Connection timed out during '#{task}' - retrying in 1sec..."
           sleep 1
           next
         end
