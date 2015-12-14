@@ -42,7 +42,7 @@ class #{@klass}
   process_tasks_with :process
 
   def enumerate(context, &callback)
-    jobs = ['job1', 'job2']
+    jobs = [{id: 'job1'}, {id: 'job2'}]
     callback.call( jobs )
   end
 
@@ -56,33 +56,8 @@ end
     it 'prepares the worker' do
       worker = @class_ref.new
       expect(worker).to receive(:prepare_for_enumeration)
-      expect(worker).to receive(:prepare_for_consumer_cancelation)
-      expect(worker).to receive(:prepare_for_task_processing)
+      expect(worker).to receive(:subscribe_to_task_queue)
       worker.run
-    end
-    describe '#currently_subscribed_to_task_queue?(task_queue)' do
-      before do
-        @worker = @class_ref.new
-
-        consumer = double('consumer')
-        expect(consumer).to receive(:queue) do
-          queue = double('queue')
-          expect(queue).to receive(:name){ 'subscribed-task-queue' }
-          queue
-        end
-
-        @worker.task_consumers = [consumer]
-      end
-      context 'when it is subscribed' do
-        it 'returns true' do
-          expect(@worker.currently_subscribed_to_task_queue?('subscribed-task-queue')).to be_truthy
-        end
-      end
-      context 'when it is not subscribed' do
-        it 'returns false' do
-          expect(@worker.currently_subscribed_to_task_queue?('task-queue-not-subscribed-to')).to be_falsey
-        end
-      end
     end
     describe '#prepare_for_enumeration' do
       before do
@@ -101,9 +76,8 @@ end
         end
 
         expect(@worker).to receive(:enumerate_tasks).with(message).and_call_original
-        expect(Distribot).to receive(:publish!).ordered.with('task-queue', 'job1')
-        expect(Distribot).to receive(:publish!).ordered.with('task-queue', 'job2')
-        expect(Distribot).to receive(:publish!).ordered.with('distribot.workflow.handler.enumerated', message)
+        expect(Distribot).to receive(:publish!).ordered.with('task-queue', hash_including(id: 'job1'))
+        expect(Distribot).to receive(:publish!).ordered.with('task-queue', hash_including(id: 'job2'))
 
         # Finally:
         @worker.prepare_for_enumeration
@@ -111,97 +85,17 @@ end
         @callback.call(message)
       end
     end
-    describe '#prepare_for_consumer_cancelation' do
-      it 'subscribes to the consumer-canceling fanout exchange with the correct callback' do
-        worker = @class_ref.new
-        message = {task_queue: 'the-task-queue-for-this-handler'}
-        expect(Distribot).to receive(:subscribe_multi).with('distribot.cancel.consumer') do |&block|
-          @callback = block
-        end
-        expect(worker).to receive(:cancel_consumers_for).with(message[:task_queue])
-
-        # Finally:
-        worker.prepare_for_consumer_cancelation
-        @callback.call(message)
-      end
-    end
-    describe '#cancel_consumers_for(task_queue)' do
-      it 'cancels consumers for the task_queue provided by name' do
-        task_queue = 'the-task-queue-for-this-handler'
-        worker = @class_ref.new
-
-        expect(worker).to receive(:consumers_of_queue).with(task_queue) do
-          consumer = double('consumer')
-          expect(consumer).to receive(:cancel)
-          [ consumer ]
-        end
-
-        # Finally:
-        worker.cancel_consumers_for(task_queue)
-      end
-    end
-    describe '#prepare_for_task_processing' do
-      context 'when the worker' do
-        before do
-          @message = {
-            workflow_id: SecureRandom.uuid,
-            phase: 'phase1',
-            handler: @klass,
-            task_queue: 'the-task-queue',
-            finished_queue: 'the-finished-queue'
-          }
-          @worker = @class_ref.new
-
-          expect(Distribot).to receive(:subscribe_multi).with(@class_ref.process_queue) do |&block|
-            @callback = block
-          end
-        end
-        context 'is already subscribed to the task queue' do
-          before do
-            expect(@worker).to receive(:currently_subscribed_to_task_queue?).with(@message[:task_queue]){ true }
-          end
-          it 'does not re-suscribe' do
-            expect(@worker).not_to receive(:subscribe_to_task_queue)
-
-            # Finally:
-            @worker.prepare_for_task_processing
-            @callback.call(@message)
-          end
-        end
-        context 'is not yet subscribed to the task queue' do
-          before do
-            expect(@worker).to receive(:currently_subscribed_to_task_queue?).with(@message[:task_queue]){ false }
-          end
-          it 'subscribes to the task_queue with the correct callback' do
-            expect(@worker).to receive(:subscribe_to_task_queue).with(@message)
-
-            # Finally:
-            @worker.prepare_for_task_processing
-            @callback.call(@message)
-          end
-        end
-      end
-    end
-    describe '#subscribe_to_task_queue(message)' do
-      before do
-        @message = {
-          task_queue: 'the-task-queue',
-          workflow_id: SecureRandom.uuid,
-          phase: 'phase1',
-          finished_queue: 'the-finished-queue'
-        }
-      end
+    describe '#subscribe_to_task_queue' do
       it 'subscribes to the task queue for this $workflow.$phase.$handler so it can consume them, and stores the consumer for cancelation later' do
         worker = @class_ref.new
-        expect(Distribot).to receive(:subscribe).with(@message[:task_queue]) do |&block|
+        expect(Distribot).to receive(:subscribe).with(@class_ref.task_queue, reenqueue_on_failure: true) do |&block|
           'fake-consumer'
         end
-        worker.subscribe_to_task_queue(@message)
-        expect(worker.task_consumers).to include 'fake-consumer'
+        worker.subscribe_to_task_queue
       end
       context 'when it receives a task to work on' do
         before do
-          expect(Distribot).to receive(:subscribe).with(@message[:task_queue]) do |&block|
+          expect(Distribot).to receive(:subscribe).with(@class_ref.task_queue, reenqueue_on_failure: true) do |&block|
             @callback = block
           end
         end
@@ -209,7 +103,7 @@ end
           task = {some_task_thing: SecureRandom.uuid}
           worker = @class_ref.new
           expect(worker).to receive(:process_single_task).with(anything, task)
-          worker.subscribe_to_task_queue(@message)
+          worker.subscribe_to_task_queue
           @callback.call(task)
         end
       end
@@ -227,7 +121,7 @@ end
         expect(Distribot).to receive(:publish!).with(context.finished_queue, {
           workflow_id: context.workflow_id,
           phase: context.phase,
-          handler: @class_ref
+          handler: @class_ref.to_s
         })
 
         # Finally:

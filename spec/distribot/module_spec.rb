@@ -19,17 +19,6 @@ describe Distribot do
     end
   end
 
-  describe '.bunny' do
-    before do
-      Distribot.configure do |config|
-        config.rabbitmq_url = nil
-      end
-    end
-    it 'returns a new Bunny instance' do
-      expect(Distribot.bunny).to be_a Bunny::Session
-    end
-  end
-
   describe '.redis' do
     before do
       Distribot.configure do |config|
@@ -64,18 +53,11 @@ describe Distribot do
 
   describe '.subscribe(queue_name, options={}, &block)' do
     before do
-      @prefetch_size = 1
-      @queue_name = "queue-#{SecureRandom.uuid}"
-      delivery_info = double('delivery_info')
-      delivery_tag = "delivery-tag-#{SecureRandom.uuid}"
-      expect(delivery_info).to receive(:delivery_tag){ @delivery_tag }
-      expect_any_instance_of(Bunny::Channel).to receive(:acknowledge).with( @delivery_tag, false)
-      expect_any_instance_of(Bunny::Queue).to receive(:subscribe).with({manual_ack: true}) do |args, &block|
-        block.call(delivery_info, '', {hello: :world}.to_json)
-      end
+      @topic = "queue-#{SecureRandom.uuid}"
+      expect_any_instance_of(Distribot::Subscription).to receive(:start).with( @topic, {} )
     end
     it 'subscribes properly' do
-      Distribot.subscribe(@queue_name) do |message|
+      Distribot.subscribe(@topic) do |message|
         expect(message).to have_key :hello
         expect(message[:hello]).to eq 'world'
       end
@@ -84,19 +66,8 @@ describe Distribot do
 
   describe '.subscribe_multi(topic, options={}, &block)' do
     before do
-      @prefetch_size = 1
       @topic = "queue-#{SecureRandom.uuid}"
-      expect_any_instance_of(Bunny::Channel).to receive(:prefetch).with( @prefetch_size )
-      exchange = double('exchange')
-      expect_any_instance_of(Bunny::Channel).to receive(:queue).with('', exclusive: true, auto_delete: true) do
-        queue = double('queue')
-        expect(queue).to receive(:bind).with(exchange){ queue }
-        expect(queue).to receive(:subscribe) do |args={}, &block|
-          block.call(nil, nil, {hello: :world}.to_json)
-        end
-        queue
-      end
-      expect_any_instance_of(Bunny::Channel).to receive(:fanout).with("distribot.fanout.#{@topic}"){ exchange }
+      expect_any_instance_of(Distribot::MultiSubscription).to receive(:start).with( @topic, {} )
     end
     it 'subscribes properly' do
       Distribot.subscribe_multi(@topic) do |message|

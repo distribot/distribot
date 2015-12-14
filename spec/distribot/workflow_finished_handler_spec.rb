@@ -2,11 +2,6 @@ require 'spec_helper'
 
 describe Distribot::WorkflowFinishedHandler do
   before :each do
-    Distribot.stub(:queue) do
-      queue = double('queue')
-      queue.stub(:subscribe)
-      queue
-    end
     Distribot.stub(:publish!)
   end
   describe 'definition' do
@@ -33,28 +28,16 @@ describe Distribot::WorkflowFinishedHandler do
       )
       @workflow_id = @workflow.id
     end
-    context 'when the $workflow_id.finished.callback queue' do
-      context 'exists' do
-        before do
-          @queue_name = "distribot.workflow.#{@workflow_id}.finished.callback"
-          expect(Distribot).to receive(:queue_exists?).with(@queue_name){true}
-          expect(Distribot::Workflow).to receive(:find).with(@workflow_id){ @workflow }
-        end
-        it 'sends a message to that queue' do
-          expect(Distribot).to receive(:publish!).with(@queue_name, {workflow_id: @workflow_id})
-          described_class.new.callback(workflow_id: @workflow_id)
-        end
+    context 'exists' do
+      before do
+        @queue_name = "distribot.workflow.#{@workflow_id}.finished.callback"
+        expect(Distribot::Workflow).to receive(:find).with(@workflow_id){ @workflow }
       end
-      context 'does not exist' do
-        before do
-          @queue_name = "distribot.workflow.#{@workflow_id}.finished.callback"
-          expect(Distribot).to receive(:queue_exists?).with(@queue_name){false}
-          expect(Distribot::Workflow).to receive(:find).with(@workflow_id){ @workflow }
-        end
-        it 'does not send a message to that queue' do
-          expect(Distribot).not_to receive(:publish!)
-          described_class.new.callback(workflow_id: @workflow_id)
-        end
+      it 'decrements the running tally of how many workflows are currently in process' do
+        redis_decr = double('redis-decr')
+        expect(redis_decr).to receive(:decr).with('distribot.workflows.running')
+        expect(Distribot).to receive(:redis).ordered{ redis_decr }
+        described_class.new.callback(workflow_id: @workflow_id)
       end
     end
   end

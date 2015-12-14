@@ -2,5 +2,5 @@
 
 require 'distribot'
 
-Distribot::WorkflowCreatedHandler.new
+puts Distribot::WorkflowCreatedHandler.new
 sleep

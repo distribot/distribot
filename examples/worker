@@ -24,18 +24,19 @@ class SimpleWorker
   def enumerate(context, &callback)
     jobs = [ ]
 
-    5.times do |chunk|
-      max = 5
+    2.times do |chunk|
+      max = 10
       jobs << (1..max).to_a.map{|n| {id: SecureRandom.uuid, args: [chunk, n] } }
     end
 #sleep 0.5
-    callback.call(jobs)
+    callback.call(jobs.flatten)
   end
 
   def process(context, job)
+#raise "Test Error" if rand * 100 < 10
 puts job
 #    puts "Processing job '#{context.workflow_id}.#{context.phase}.#{self} #{job[:args]}'"
-#    sleep 0.5
+    sleep 0.5
   end
 end
 

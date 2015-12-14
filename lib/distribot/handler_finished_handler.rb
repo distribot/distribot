@@ -14,9 +14,6 @@ module Distribot
           workflow_id: workflow.id,
           phase: phase.name
         }
-        Distribot.broadcast! 'distribot.cancel.consumer', {
-          task_queue: message[:task_queue]
-        }
       end
     end
 

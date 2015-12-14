@@ -1,55 +1,65 @@
 
 infra:
-  image: distribot/dev
+#  image: distribot/dev
+  build: .
+  dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
     - TERM=xterm
+    - RABBITMQ_USERNAME=distribot
+    - RABBITMQ_PASSWORD=distribot
   working_dir: /var/www/distribot
-  command: bash -c "echo 'bind 0.0.0.0' | sudo tee -a /etc/redis/redis.conf && sudo service redis-server restart && sudo service rabbitmq-server restart && bash ./perms.sh && tail -f /dev/null"
+  command: bash -c "./provision/infra.sh && tail -f /dev/null"
   ports:
     - 5672
     - 15672
     - 6379
 
 engine:
-  image: distribot/dev
-  # build: .
-  # dockerfile: ./Dockerfile
+#  image: distribot/dev
+  build: .
+  dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
     - TERM=xterm
     - INFRA_HOST=infra_1
+    - RABBITMQ_USERNAME=distribot
+    - RABBITMQ_PASSWORD=distribot
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "sudo gem install eye --no-ri --no-rdoc && bundle && tail -f /dev/null"
+  command: bash -c "./provision/nodes.sh && tail -f /dev/null"
 
 worker:
-  image: distribot/dev
-  # build: .
-  # dockerfile: ./Dockerfile
+#  image: distribot/dev
+  build: .
+  dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
     - TERM=xterm
     - INFRA_HOST=infra_1
+    - RABBITMQ_USERNAME=distribot
+    - RABBITMQ_PASSWORD=distribot
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "bundle && tail -f /dev/null"
+  command: bash -c "./provision/nodes.sh && tail -f /dev/null"
 
 controller:
-  image: distribot/dev
-  # build: .
-  # dockerfile: ./Dockerfile
+#  image: distribot/dev
+  build: .
+  dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
     - TERM=xterm
     - INFRA_HOST=infra_1
+    - RABBITMQ_USERNAME=distribot
+    - RABBITMQ_PASSWORD=distribot
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "bundle && tail -f /dev/null"
+  command: bash -c "./provision/nodes.sh && tail -f /dev/null"

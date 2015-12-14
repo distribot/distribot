@@ -69,7 +69,7 @@ module Example
       first_transition = workflow.transitions.sort_by(&:timestamp).first
       last_transition = workflow.transitions.sort_by(&:timestamp).last
       duration = last_transition.timestamp - first_transition.timestamp
-      puts "WORKFLOW FINISHED: after #{duration} seconds -- #{workflow}: #{finished} total"
+      puts "WORKFLOW FINISHED: after #{duration} seconds -- #{info}: #{finished} total"
     end
     @workflow
   end
@@ -82,15 +82,19 @@ max = 1 if max <= 0
 puts "<ENTER> when ready:"
 gets
 
+start_time = Time.now.to_f
 Distribot.redis.set('distribot.workflows.running', 0)
 Distribot.redis.set('distribot.workflows.max', max)
 Example.make_workflow "Workflow[1]"
 
 while true
-  sleep 5
+  sleep 2
   max = Distribot.redis.get('distribot.workflows.max').to_i
   current = Distribot.redis.get('distribot.workflows.running').to_i
-  puts "\tRUNNING: at #{Time.now} -- #{current} / #{max}"
+  running_time = Time.now.to_f - start_time
+  finished = Distribot.redis.get('finished').to_i
+  rate = ( finished / running_time ).to_f.round(2)
+  puts "\tRUNNING: at #{Time.now} -- #{current} / #{max} (#{finished} finished in #{running_time.round(2)}sec = #{rate}/sec)"
   diff = max - current
   diff.times do |num|
     new_index = Distribot.redis.get('finished')
