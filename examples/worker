@@ -34,7 +34,7 @@ class SimpleWorker
 
   def process(context, job)
 #raise "Test Error" if rand * 100 < 10
-puts job
+logger.info job.to_s
 #    puts "Processing job '#{context.workflow_id}.#{context.phase}.#{self} #{job[:args]}'"
     sleep 0.1
   end
@@ -47,11 +47,11 @@ class CheapWorker < SimpleWorker; end
 class ForeignWorker < SimpleWorker; end
 class SlowWorker < SimpleWorker; end
 
-puts HardWorker.new.run
-puts GoodWorker.new.run
-puts FastWorker.new.run
-puts CheapWorker.new.run
-puts ForeignWorker.new.run
-puts SlowWorker.new.run
+Distribot.logger.info HardWorker.new.run
+Distribot.logger.info GoodWorker.new.run
+Distribot.logger.info FastWorker.new.run
+Distribot.logger.info CheapWorker.new.run
+Distribot.logger.info ForeignWorker.new.run
+Distribot.logger.info SlowWorker.new.run
 
 sleep

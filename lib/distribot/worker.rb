@@ -30,6 +30,10 @@ module Distribot
           self
         end
 
+        def logger
+          Distribot.logger
+        end
+
         def prepare_for_enumeration
           Distribot.subscribe( self.class.enumeration_queue ) do |message|
             enumerate_tasks(message)
@@ -68,6 +72,7 @@ module Distribot
           self.send(self.class.enumerator, context) do |tasks|
             task_counter = message[:task_counter]
             Distribot.redis.incrby task_counter, tasks.count
+            Distribot.redis.incrby "#{task_counter}.total", tasks.count
             tasks.each do |task|
               Distribot.publish! message[:task_queue], task.merge(
                 workflow_id: context.workflow_id,

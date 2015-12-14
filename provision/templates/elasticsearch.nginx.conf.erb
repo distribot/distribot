@@ -1,0 +1,29 @@
+
+server {
+  # TODO: force upgrade to ssl.
+  listen 80;
+
+  root <%= installation_path %>/kibana;
+
+  client_max_body_size 3M;
+
+  location /elastic/ {
+    proxy_pass http://127.0.0.1:9200/;
+  }
+}
+
+server {
+  listen 443;
+
+  ssl on;
+  ssl_certificate /etc/nginx/certs/distribot/server.crt;
+  ssl_certificate_key /etc/nginx/certs/distribot/server.key;
+
+  root <%= installation_path %>/kibana;
+
+  client_max_body_size 3M;
+
+  location /elastic/ {
+    proxy_pass http://127.0.0.1:9200/;
+  }
+}

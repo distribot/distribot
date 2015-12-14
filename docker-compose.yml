@@ -15,6 +15,7 @@ infra:
     - 5672
     - 15672
     - 6379
+    - 443
 
 engine:
 #  image: distribot/dev
@@ -30,7 +31,7 @@ engine:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "./provision/nodes.sh && tail -f /dev/null"
+  command: bash -c "./provision/nodes.sh && eye load examples/distribot.eye && tail -f /dev/null"
 
 worker:
 #  image: distribot/dev
@@ -46,7 +47,8 @@ worker:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "./provision/nodes.sh && tail -f /dev/null"
+  command: bash -c "./provision/nodes.sh && bundle exec examples/worker && bundle exec examples/worker"
+  # "
 
 controller:
 #  image: distribot/dev
