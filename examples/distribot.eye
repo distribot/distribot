@@ -40,7 +40,7 @@ Eye.application :distribot do
       daemonize true
       pid_file "tmp/#{thing}.pid"
       stdall "log/#{thing}.log"
-      start_command "distribot.#{thing}"
+      start_command "dotenv bundle exec bin/distribot.#{thing}"
       stop_signals [:TERM, 5.seconds, :KILL]
       restart_command "kill -USR2 {PID}"
       restart_grace 10.seconds

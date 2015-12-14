@@ -70,7 +70,7 @@ module Example
       last_transition = workflow.transitions.sort_by(&:timestamp).last
       duration = last_transition.timestamp - first_transition.timestamp
       puts "WORKFLOW FINISHED: after #{duration} seconds -- #{info}: #{finished} total"
-    end
+    end if @workflow.validate!
     @workflow
   end
 end
