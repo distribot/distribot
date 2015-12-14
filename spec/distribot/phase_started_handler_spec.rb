@@ -55,7 +55,7 @@ describe Distribot::PhaseStartedHandler do
 
           enumerate_queue = 'distribot.workflow.handler.FooHandler.enumerate'
           process_queue = 'distribot.workflow.handler.FooHandler.process'
-          task_queue = 'distribot.workflow.FooHandler.tasks'
+          task_queue = 'distribot.workflow.handler.FooHandler.tasks'
           finished_queue = 'distribot.workflow.task.finished'
           task_counter = 'distribot.workflow.' + @workflow.id + '.phase1.FooHandler.finished'
 

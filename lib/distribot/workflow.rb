@@ -60,7 +60,6 @@ module Distribot
     end
 
     def save!(&block)
-      self.validate!
       self.id = SecureRandom.uuid
       record_id = self.redis_id + ':definition'
       is_new = redis.keys(record_id).count <= 0
