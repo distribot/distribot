@@ -17,7 +17,7 @@ module Distribot
         phase.handlers.each do |handler|
           enumerate_queue = "distribot.workflow.handler.#{handler}.enumerate"
           process_queue = "distribot.workflow.handler.#{handler}.process"
-          task_queue = "distribot.workflow.#{handler}.tasks"
+          task_queue = "distribot.workflow.handler.#{handler}.tasks"
           finished_queue = "distribot.workflow.task.finished"
           task_counter = "distribot.workflow.#{workflow.id}.#{phase.name}.#{handler}.finished"
 
