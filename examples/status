@@ -33,5 +33,6 @@ while true do
         puts "Workflow #{workflow.id} (age:#{sprintf('%05.02f',total_age)} sec)\tphase:#{latest_phase.name}\t(#{time_in_phase.round(2)} seconds\t#{handler_counts.join("\t")}"
       end
   end
+puts "-------------------------------------------------------------------------------------------------------------------------------------------------------"
   sleep 0.5
 end

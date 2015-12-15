@@ -1,8 +1,8 @@
 
 infra:
-#  image: distribot/dev
-  build: .
-  dockerfile: ./Dockerfile
+  image: distribot/infra
+  # build: .
+  # dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
@@ -11,6 +11,7 @@ infra:
     - RABBITMQ_PASSWORD=distribot
   working_dir: /var/www/distribot
   command: bash -c "./provision/infra.sh && tail -f /dev/null"
+  # "
   ports:
     - 5672
     - 15672
@@ -18,9 +19,9 @@ infra:
     - 443
 
 engine:
-#  image: distribot/dev
-  build: .
-  dockerfile: ./Dockerfile
+  image: distribot/node
+  # build: .
+  # dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
@@ -31,12 +32,12 @@ engine:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "./provision/nodes.sh && eye load examples/distribot.eye && tail -f /dev/null"
+  command: bash -c "./provision/nodes.sh && eye load examples/distribot.eye && sudo tail -f /var/log/td-agent/td-agent.log"
 
 worker:
-#  image: distribot/dev
-  build: .
-  dockerfile: ./Dockerfile
+  image: distribot/node
+  # build: .
+  # dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
@@ -47,13 +48,13 @@ worker:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "./provision/nodes.sh && bundle exec examples/worker && bundle exec examples/worker"
+  command: bash -c "./provision/nodes.sh && bundle exec examples/worker & bundle exec examples/worker & sudo tail -f /var/log/td-agent/td-agent.log"
   # "
 
 controller:
-#  image: distribot/dev
-  build: .
-  dockerfile: ./Dockerfile
+  image: distribot/node
+  # build: .
+  # dockerfile: ./Dockerfile
   volumes:
     - ./:/var/www/distribot
   environment:
@@ -64,4 +65,4 @@ controller:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "./provision/nodes.sh && tail -f /dev/null"
+  command: bash -c "./provision/nodes.sh && sudo tail -f /var/log/td-agent/td-agent.log"

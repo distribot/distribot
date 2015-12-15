@@ -6,6 +6,7 @@ PATH
       bunny
       dotenv
       eye
+      logstash-logger
       redis
 
 GEM
@@ -60,6 +61,10 @@ GEM
     hitimes (1.2.3)
     i18n (0.7.0)
     json (1.8.3)
+    logstash-event (1.2.02)
+    logstash-logger (0.15.2)
+      logstash-event (~> 1.2)
+      stud
     minitest (5.8.3)
     nio4r (1.1.1)
     rake (10.4.2)
@@ -87,6 +92,7 @@ GEM
       simplecov-html (~> 0.10.0)
     simplecov-html (0.10.0)
     state_machine (1.2.0)
+    stud (0.0.22)
     thor (0.19.1)
     thread_safe (0.3.5)
     timers (4.1.1)
@@ -113,4 +119,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   1.10.6
+   1.11.0

@@ -73,8 +73,6 @@ module Example
             GoodWorker
             FastWorker
             CheapWorker
-            ForeignWorker
-            SlowWorker
           ),
           transitions_to: 'finish'
         },
@@ -112,6 +110,7 @@ puts "<ENTER> when ready:"
 gets
 
 start_time = Time.now.to_f
+Distribot.redis.set('dificulty', 3)
 Distribot.redis.set('distribot.workflows.running', 0)
 Distribot.redis.set('distribot.workflows.max', max)
 Example.make_workflow "Workflow[1]"

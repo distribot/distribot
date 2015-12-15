@@ -51,19 +51,30 @@ setup_fluentd() {
   else
     echo '!distribot' | sudo tee -a /etc/rsyslog.conf
     echo "*.* @127.0.0.1:42185" | sudo tee -a /etc/rsyslog.conf
-    sudo service rsyslog restart
   fi
 
   sudo cp provision/templates/fluentd.conf /etc/td-agent/td-agent.conf
+
+  sudo service rsyslog restart
 
   # Finally, restart td-agent:
   sudo service td-agent restart
 }
 
 setup_dependencies
+
+while ! ( echo -e "443\n6379\n5672" | xargs -i nc -w 1 -zv $INFRA_HOST {} ) ; do
+  echo "Waiting for infra to come up..."
+  sleep 5
+done
+
 setup_fluentd
 
 cd /var/www/distribot
 bundle
 
-
+echo '--------------------------------------------------------------------------'
+echo '--------------------------------------------------------------------------'
+echo '--------------------------------------------------------------------------'
+echo '--------------------------------------------------------------------------'
+echo '--------------------------------------------------------------------------'

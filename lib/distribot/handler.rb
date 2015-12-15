@@ -28,9 +28,6 @@ module Distribot
             self.send(@@handlers[self.class.to_s], message)
           end
         end
-        def logger
-          Distribot.logger
-        end
       end
     end
   end

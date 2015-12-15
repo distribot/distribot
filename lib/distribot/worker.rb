@@ -35,8 +35,12 @@ module Distribot
         end
 
         def prepare_for_enumeration
-          Distribot.subscribe( self.class.enumeration_queue ) do |message|
-            enumerate_tasks(message)
+          logger.tagged(self.class.task_queue) do
+            Distribot.subscribe( self.class.enumeration_queue ) do |message|
+              logger.tagged("workflow_id:#{message[:workflow_id]}") do
+                enumerate_tasks(message)
+              end
+            end
           end
         end
 
@@ -45,13 +49,17 @@ module Distribot
         end
 
         def subscribe_to_task_queue
-          Distribot.subscribe(self.class.task_queue, reenqueue_on_failure: true) do |task|
-            context = OpenStruct.new(
-              workflow_id: task[:workflow_id],
-              phase: task[:phase],
-              finished_queue: 'distribot.workflow.task.finished',
-            )
-            self.process_single_task(context, task)
+          logger.tagged(self.class.task_queue) do
+            Distribot.subscribe(self.class.task_queue, reenqueue_on_failure: true) do |task|
+              logger.tagged("workflow_id:#{task[:workflow_id]}") do
+                context = OpenStruct.new(
+                  workflow_id: task[:workflow_id],
+                  phase: task[:phase],
+                  finished_queue: 'distribot.workflow.task.finished',
+                )
+                self.process_single_task(context, task)
+              end
+            end
           end
         end
 
