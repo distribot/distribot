@@ -35,10 +35,15 @@ module Distribot
         end
 
         def prepare_for_enumeration
-          logger.tagged(self.class.task_queue) do
+          logger.tagged("#{self.class}") do
             Distribot.subscribe( self.class.enumeration_queue ) do |message|
-              logger.tagged("workflow_id:#{message[:workflow_id]}") do
-                enumerate_tasks(message)
+              logger.tagged("handler:#{self.class}", "phase:#{message[:phase]}", "workflow_id:#{message[:workflow_id]}") do
+                begin
+                  enumerate_tasks(message)
+                rescue StandardError => e
+                  logger.error "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+                  raise e
+                end
               end
             end
           end
@@ -49,15 +54,20 @@ module Distribot
         end
 
         def subscribe_to_task_queue
-          logger.tagged(self.class.task_queue) do
+          logger.tagged("#{self.class}") do
             Distribot.subscribe(self.class.task_queue, reenqueue_on_failure: true) do |task|
-              logger.tagged("workflow_id:#{task[:workflow_id]}") do
+              logger.tagged("handler:#{self.class}", "phase:#{task[:phase]}", "workflow_id:#{task[:workflow_id]}") do
                 context = OpenStruct.new(
                   workflow_id: task[:workflow_id],
                   phase: task[:phase],
                   finished_queue: 'distribot.workflow.task.finished',
                 )
-                self.process_single_task(context, task)
+                begin
+                  self.process_single_task(context, task)
+                rescue StandardError => e
+                  logger.error "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+                  raise e
+                end
               end
             end
           end
