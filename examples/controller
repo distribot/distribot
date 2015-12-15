@@ -17,11 +17,10 @@ Distribot.configure do |config|
 end
 
 module Example
-  def self.make_workflow(name)
-    name += "#1"
-    @workflow = Distribot::Workflow.new(
-      name: name,
-      phases: [
+
+  def self.phase_groups
+    [
+      [
         {
           name: 'start',
           is_initial: true,
@@ -61,7 +60,35 @@ module Example
           name: 'finish',
           is_final: true
         }
+      ],
+      [
+        {
+          name: 'start',
+          is_initial: true,
+          transitions_to: 'searching'
+        },
+        {
+          name: 'searching',
+          handlers: %w(
+            GoodWorker
+            FastWorker
+            CheapWorker
+          ),
+          transitions_to: 'finish'
+        },
+        {
+          name: 'finish',
+          is_final: true
+        }
       ]
+    ]
+  end
+
+  def self.make_workflow(name)
+    name += "#1"
+    @workflow = Distribot::Workflow.new(
+      name: name,
+      phases: phase_groups.sample
     )
     @workflow.save! do |info|
       finished = Distribot.redis.incr('finished')
@@ -83,6 +110,7 @@ puts "<ENTER> when ready:"
 gets
 
 start_time = Time.now.to_f
+Distribot.redis.set('dificulty', 3)
 Distribot.redis.set('distribot.workflows.running', 0)
 Distribot.redis.set('distribot.workflows.max', max)
 Example.make_workflow "Workflow[1]"

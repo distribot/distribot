@@ -71,14 +71,14 @@ describe Distribot::Workflow do
         # We set the id with a V4 uuid:
         id = 'insecure-non-random-uuid'
         expect(SecureRandom).to receive(:uuid){ id }
-        expect(@workflow).to receive(:id=).with(id)
+        expect(@workflow).to receive(:id=).with(id).and_call_original
         expect(@workflow).to receive(:redis_id){'redis-id'}
 
         # We check for the pre-existence of the workflow:
         expect(@workflow).to receive(:redis).ordered do
           redis = double('redis1')
           # Say it does not exist already:
-          expect(redis).to receive(:keys).with('redis-id:definition'){ [ ] }
+          expect(redis).to receive(:get).with('redis-id:definition')
           redis
         end
 
@@ -89,9 +89,16 @@ describe Distribot::Workflow do
           redis
         end
 
+        expect(@workflow).to receive(:redis).ordered do
+          redis = double('redis2')
+          # Say it does not exist already:
+          expect(redis).to receive(:sadd).with('distribot.workflows.active', id)
+          redis
+        end
+
         # We publish our existence:
         expect(Distribot).to receive(:publish!).with('distribot.workflow.created', {
-          workflow_id: @workflow.id
+          workflow_id: id
         })
 
         # Add a transition in the database:

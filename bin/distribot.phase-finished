@@ -2,5 +2,5 @@
 
 require 'distribot'
 
-puts Distribot::PhaseFinishedHandler.new
+Distribot.logger.info Distribot::PhaseFinishedHandler.new
 sleep

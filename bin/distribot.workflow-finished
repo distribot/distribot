@@ -2,5 +2,5 @@
 
 require 'distribot'
 
-puts Distribot::WorkflowFinishedHandler.new
+Distribot.logger.info Distribot::WorkflowFinishedHandler.new
 sleep

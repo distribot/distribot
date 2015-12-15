@@ -42,6 +42,7 @@ class #{@klass}
   process_tasks_with :process
 
   def enumerate(context, &callback)
+    logger.info "HELLO FROM #{self}!"
     jobs = [{id: 'job1'}, {id: 'job2'}]
     callback.call( jobs )
   end

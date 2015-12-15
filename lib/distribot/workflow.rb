@@ -1,11 +1,12 @@
 
 module Distribot
   class Workflow
-    attr_accessor :id, :name, :phases, :consumer, :finished_callback_queue
+    attr_accessor :id, :name, :phases, :consumer, :finished_callback_queue, :created_at
 
     def initialize(attrs={})
       self.id = attrs[:id]
       self.name = attrs[:name]
+      self.created_at = attrs[:created_at] unless attrs[:created_at].nil?
       self.phases = [ ]
       if attrs.has_key? :phases
         attrs[:phases].each do |options|
@@ -63,6 +64,7 @@ module Distribot
       self.id = SecureRandom.uuid
       record_id = self.redis_id + ':definition'
       is_new = redis.get(record_id).to_s == ''
+      self.created_at = Time.now.to_f if is_new
       redis.set record_id, serialize
       redis.sadd 'distribot.workflows.active', self.id
 
@@ -167,6 +169,7 @@ module Distribot
       {
         id: self.id,
         name: self.name,
+        created_at: self.created_at,
         phases: self.phases.map(&:to_hash)
       }
     end

@@ -5,19 +5,34 @@ require 'byebug'
 
 redis = Distribot.redis
 while true do
-  redis.smembers('distribot.workflows.active').sort.each do |id|
-    workflow = Distribot::Workflow.find( id )
-    latest_transition = workflow.transitions.last
-    latest_phase = workflow.phase(latest_transition.to) || Distribot::Phase.new(name: "UNKNOWN")
-    next if latest_phase.is_final
-    time_in_phase = Time.now.to_f - latest_transition.timestamp
+  puts "\n"
+  redis
+    .smembers('distribot.workflows.active')
+    .map{|id| Distribot::Workflow.find(id) }
+    .sort_by(&:created_at)
+    .reverse
+    .each do |workflow|
+      # Cover the odd case of fetching a workflow that hasn't had its first transition yet:
+      latest_transition = workflow.transitions.last or next
 
-    puts "Workflow #{workflow.id} is " << if latest_phase.is_final
-      "FINISHED!"
-    else
-      "STILL ON PHASE #{latest_phase.name} (#{time_in_phase.round(2)} seconds"
-    end
+      latest_phase = workflow.phase(latest_transition.to) || Distribot::Phase.new(name: "UNKNOWN")
+      next if latest_phase.is_final
+      time_in_phase = Time.now.to_f - latest_transition.timestamp
+      total_age = Time.now.to_f - workflow.created_at
+
+      if latest_phase.is_final
+        puts "Workflow #{workflow.id} is finished."
+      else
+        handler_counts = latest_phase.handlers.sort.map do |handler|
+          remaining_tasks = redis.get("distribot.workflow.#{workflow.id}.#{latest_phase.name}.#{handler}.finished").to_i
+          total_tasks = redis.get("distribot.workflow.#{workflow.id}.#{latest_phase.name}.#{handler}.finished.total").to_i
+          percent_finished = ((total_tasks - remaining_tasks) * 1.0) / (total_tasks * 1.0) * 100
+          finished_tasks = total_tasks - remaining_tasks
+          "#{handler}:\t#{['=' * (finished_tasks > 0 ? finished_tasks : 0), '-' * (remaining_tasks > 0 ? remaining_tasks : 0)].join('')} #{remaining_tasks}/#{total_tasks} (#{percent_finished.round(2)}%)"
+        end
+        puts "Workflow #{workflow.id} (age:#{sprintf('%05.02f',total_age)} sec)\tphase:#{latest_phase.name}\t(#{time_in_phase.round(2)} seconds\t#{handler_counts.join("\t")}"
+      end
   end
-  puts "\n\n"
-  sleep 1
+puts "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+  sleep 0.5
 end
