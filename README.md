@@ -56,4 +56,36 @@ end
 }
 ```
 
+# TODO
 
+### Features
+
+  * Separate workflow types and instances.
+    * define a workflow-type once
+    * reference it by id/name
+  * Ability to control running workflows
+    * cancel
+    * pause
+    * resume
+  * Handler versioning
+    * semver
+    * specify handler versions in workflow definitions
+      * similar to gemfile
+  * Ability to update handlers on worker nodes
+
+### Organization
+
+  * Break this project into smaller parts.
+    * gem code
+      * enough infrastructure to run the code
+    * small running environment which uses the gem
+      * engine
+      * worker
+      * controller
+      * infra
+        * redis
+        * rabbitmq
+        * elasticsearch
+        * kibana
+  * status dashboard
+    * show running workflows
