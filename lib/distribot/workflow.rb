@@ -1,17 +1,57 @@
 
 module Distribot
   class Workflow
-    attr_accessor :id, :name, :phases, :consumer, :finished_callback_queue
+    attr_accessor :id, :name, :phases, :consumer, :finished_callback_queue, :created_at
 
     def initialize(attrs={})
       self.id = attrs[:id]
       self.name = attrs[:name]
+      self.created_at = attrs[:created_at] unless attrs[:created_at].nil?
       self.phases = [ ]
       if attrs.has_key? :phases
         attrs[:phases].each do |options|
           self.add_phase(options)
         end
       end
+    end
+
+    def validate!
+      # Make sure the phases make a continuous line:
+      self.phases.each do |phase|
+        next if phase.is_final
+        unless (self.phases.map{|x| x.name } - [phase.name]).include? phase.transitions_to
+          raise "Phase '#{phase.name}' transitions to invalid phase '#{phase.transitions_to}'"
+        end
+        # Make sure every handler is actively watched:
+        phase.handlers.each do |handler|
+          queue_names = [
+            "distribot.workflow.handler.#{handler}.enumerate",
+            "distribot.workflow.handler.#{handler}.tasks",
+          ]
+          queue_names.each do |queue_name|
+            unless Distribot.queue_exists?(queue_name)
+              raise "The worker queue '#{queue_name}' for handler '#{handler}' does not yet exist. Make sure the handler is active within a worker."
+            end
+          end
+        end
+      end
+
+      # Make sure the engine appears to be running:
+      engine_queues = %w(
+        distribot.workflow.created
+        distribot.workflow.phase.started
+        distribot.workflow.task.finished
+        distribot.workflow.handler.finished
+        distribot.workflow.phase.finished
+        distribot.workflow.finished
+      )
+      missing_queues = engine_queues.reject{|queue| Distribot.queue_exists?(queue) }
+      unless missing_queues.empty?
+        raise "The following engine queues are missing. Ensure their workers are enabled. #{missing_queues.join(", ")}"
+      end
+
+      # Finally:
+      true
     end
 
     def self.create!(attrs={})
@@ -23,10 +63,13 @@ module Distribot
     def save!(&block)
       self.id = SecureRandom.uuid
       record_id = self.redis_id + ':definition'
-      is_new = redis.keys(record_id).count <= 0
+      is_new = redis.get(record_id).to_s == ''
+      self.created_at = Time.now.to_f if is_new
       redis.set record_id, serialize
+      redis.sadd 'distribot.workflows.active', self.id
 
       if is_new
+        self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
         Distribot.publish! 'distribot.workflow.created', {
           workflow_id: self.id
         }
@@ -41,7 +84,6 @@ module Distribot
             end
           end
         end
-        self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
       end
     end
 
@@ -127,6 +169,7 @@ module Distribot
       {
         id: self.id,
         name: self.name,
+        created_at: self.created_at,
         phases: self.phases.map(&:to_hash)
       }
     end

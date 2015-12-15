@@ -13,6 +13,8 @@ require 'distribot/handler_finished_handler'
 require 'distribot/phase_finished_handler'
 require 'distribot/workflow_finished_handler'
 require 'distribot/connector'
+require 'syslog/logger'
+require 'logstash-logger'
 
 module Distribot
 
@@ -84,8 +86,7 @@ module Distribot
   end
 
   def self.logger
-    @@logger ||= Logger.new(STDERR)
-    @@logger.level = ENV['DEBUG'].to_s == 'true' ? Logger::DEBUG : Logger::INFO
+    @@logger ||= LogStashLogger.new(type: :syslog, formatter: :json)
     @@logger
   end
 

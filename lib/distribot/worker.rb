@@ -30,24 +30,46 @@ module Distribot
           self
         end
 
+        def logger
+          Distribot.logger
+        end
+
         def prepare_for_enumeration
-          Distribot.subscribe( self.class.enumeration_queue ) do |message|
-            enumerate_tasks(message)
+          logger.tagged("#{self.class}") do
+            Distribot.subscribe( self.class.enumeration_queue ) do |message|
+              logger.tagged("handler:#{self.class}", "phase:#{message[:phase]}", "workflow_id:#{message[:workflow_id]}") do
+                begin
+                  enumerate_tasks(message)
+                rescue StandardError => e
+                  logger.error "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+                  raise e
+                end
+              end
+            end
           end
         end
 
         def self.task_queue
-          "distribot.workflow.#{self}.tasks"
+          "distribot.workflow.handler.#{self}.tasks"
         end
 
         def subscribe_to_task_queue
-          Distribot.subscribe(self.class.task_queue, reenqueue_on_failure: true) do |task|
-            context = OpenStruct.new(
-              workflow_id: task[:workflow_id],
-              phase: task[:phase],
-              finished_queue: 'distribot.workflow.task.finished',
-            )
-            self.process_single_task(context, task)
+          logger.tagged("#{self.class}") do
+            Distribot.subscribe(self.class.task_queue, reenqueue_on_failure: true) do |task|
+              logger.tagged("handler:#{self.class}", "phase:#{task[:phase]}", "workflow_id:#{task[:workflow_id]}") do
+                context = OpenStruct.new(
+                  workflow_id: task[:workflow_id],
+                  phase: task[:phase],
+                  finished_queue: 'distribot.workflow.task.finished',
+                )
+                begin
+                  self.process_single_task(context, task)
+                rescue StandardError => e
+                  logger.error "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+                  raise e
+                end
+              end
+            end
           end
         end
 
@@ -68,6 +90,7 @@ module Distribot
           self.send(self.class.enumerator, context) do |tasks|
             task_counter = message[:task_counter]
             Distribot.redis.incrby task_counter, tasks.count
+            Distribot.redis.incrby "#{task_counter}.total", tasks.count
             tasks.each do |task|
               Distribot.publish! message[:task_queue], task.merge(
                 workflow_id: context.workflow_id,
