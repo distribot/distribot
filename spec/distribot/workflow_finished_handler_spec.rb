@@ -37,6 +37,9 @@ describe Distribot::WorkflowFinishedHandler do
         redis_decr = double('redis-decr')
         expect(redis_decr).to receive(:decr).with('distribot.workflows.running')
         expect(Distribot).to receive(:redis).ordered{ redis_decr }
+        redis_srem = double('redis-srem')
+        expect(redis_srem).to receive(:srem).with('distribot.workflows.active', @workflow.id)
+        expect(Distribot).to receive(:redis).ordered{ redis_srem }
         described_class.new.callback(workflow_id: @workflow_id)
       end
     end
