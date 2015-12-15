@@ -35,8 +35,12 @@ class SimpleWorker
   def process(context, job)
 #raise "Test Error" if rand * 100 < 10
 logger.info job.to_s
+# Fail, 10% of the time:
+
+raise "Test Error!" if rand >= 0.9
+
 #    puts "Processing job '#{context.workflow_id}.#{context.phase}.#{self} #{job[:args]}'"
-    job_time = Distribot.redis.get('difficulty').to_i
+    job_time = Distribot.redis.get('difficulty').to_f
     sleep job_time <= 0 ? 3 : job_time
   end
 end
