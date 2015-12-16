@@ -99,7 +99,7 @@ module Distribot
         def enumerate_tasks(message)
           context = OpenStruct.new(message)
           workflow = Distribot::Workflow.find( context.workflow_id )
-          return if workflow.paused? || workflow.canceled?
+          raise WorkflowCanceledError.new if workflow.canceled?
           self.send(self.class.enumerator, context) do |tasks|
             task_counter = message[:task_counter]
             Distribot.redis.incrby task_counter, tasks.count
