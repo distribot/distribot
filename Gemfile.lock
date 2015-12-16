@@ -8,6 +8,7 @@ PATH
       eye
       logstash-logger
       redis
+      wrest
 
 GEM
   remote: https://rubygems.org/
@@ -20,6 +21,7 @@ GEM
       tzinfo (~> 1.1)
     addressable (2.3.8)
     amq-protocol (2.0.0)
+    builder (3.2.2)
     bunny (2.2.1)
       amq-protocol (>= 2.0.0)
     byebug (8.2.0)
@@ -66,6 +68,7 @@ GEM
       logstash-event (~> 1.2)
       stud
     minitest (5.8.3)
+    multi_json (1.11.2)
     nio4r (1.1.1)
     rake (10.4.2)
     redis (3.2.2)
@@ -103,6 +106,10 @@ GEM
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
       hashdiff
+    wrest (2.1.2)
+      activesupport (~> 4)
+      builder (> 2.0)
+      multi_json (~> 1.0)
 
 PLATFORMS
   ruby

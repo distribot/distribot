@@ -20,6 +20,15 @@ module Distribot
         def self.processor
           @@processor
         end
+
+        # Does both setting/getting:
+        def self.version(val=nil)
+          unless val.nil?
+            @@version = val
+          end
+          @@version
+        end
+
         def self.enumeration_queue
           "distribot.workflow.handler.#{self}.enumerate"
         end

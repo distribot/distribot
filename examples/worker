@@ -18,6 +18,7 @@ end
 
 class SimpleWorker
   include Distribot::Worker
+  version '0.1.0'
   enumerate_with :enumerate
   process_tasks_with :process
 
