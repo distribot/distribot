@@ -104,6 +104,7 @@ module Distribot
     end
 
     def pause!
+      raise "Cannot pause unless running" unless self.running?
       self.add_transition(to: 'paused', timestamp: Time.now.utc.to_f)
     end
 
@@ -121,11 +122,16 @@ module Distribot
     end
 
     def cancel!
+      raise "Cannot cancel unless running" unless self.running?
       self.add_transition(to: 'canceled', timestamp: Time.now.utc.to_f)
     end
 
     def canceled?
       self.current_phase == 'canceled'
+    end
+
+    def running?
+      ! ( self.paused? || self.canceled? || self.finished? )
     end
 
     def redis_id
