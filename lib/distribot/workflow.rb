@@ -108,6 +108,8 @@ module Distribot
     end
 
     def resume!
+      raise "Cannot resume unless paused" unless self.paused?
+
       # Find the last transition before we were paused:
       prev_phase = self.transitions.reverse.find{|x| x.to != 'paused'}
       # Back to where we once belonged
