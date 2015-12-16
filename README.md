@@ -64,18 +64,14 @@ end
 
 ### Features
 
-  * Separate workflow types and instances.
-    * define a workflow-type once
-    * reference it by id/name
-  * Ability to control running workflows
-    * cancel
-    * pause
-    * resume
+  * ~~Ability to control running workflows~~
+    * ~~cancel~~
+    * ~~pause~~
+    * ~~resume~~
   * Handler versioning
     * semver
     * specify handler versions in workflow definitions
       * similar to gemfile
-  * Ability to update handlers on worker nodes
 
 ### Organization
 
