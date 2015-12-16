@@ -1,7 +1,11 @@
 
 # Distribot
 
-A distributed workflow engine for rabbitmq.
+Work scheduling and distribution engine.
+
+## Features
+
+  * Built on RabbitMQ and Redis.
 
 ![robot](https://cdn2.iconfinder.com/data/icons/windows-8-metro-style/512/robot.png)
 

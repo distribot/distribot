@@ -103,6 +103,29 @@ module Distribot
       self.phases.find{|x| x.name == name}
     end
 
+    def pause!
+      self.add_transition(to: 'paused', timestamp: Time.now.utc.to_f)
+    end
+
+    def resume!
+      # Find the last transition before we were paused:
+      prev_phase = self.transitions.reverse.find{|x| x.to != 'paused'}
+      # Back to where we once belonged
+      self.add_transition(to: prev_phase.to, timestamp: Time.now.utc.to_f)
+    end
+
+    def paused?
+      self.current_phase == 'paused'
+    end
+
+    def cancel!
+      self.add_transition(to: 'canceled', timestamp: Time.now.utc.to_f)
+    end
+
+    def canceled?
+      self.current_phase == 'canceled'
+    end
+
     def redis_id
       @redis_id ||= Distribot.redis_id("workflow", self.id)
     end

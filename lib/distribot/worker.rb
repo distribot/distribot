@@ -1,6 +1,10 @@
 
 module Distribot
   module Worker
+
+    class WorkflowCanceledError < StandardError; end
+    class WorkflowPausedError < StandardError; end
+
     def self.included(klass)
 
       klass.class_eval do
@@ -74,6 +78,13 @@ module Distribot
         end
 
         def process_single_task(context, task)
+          workflow = Distribot::Workflow.find( context.workflow_id )
+          if workflow.canceled?
+            raise WorkflowCanceledError.new
+          elsif workflow.paused?
+            raise WorkflowPausedError.new
+          end
+
           # Your code is called right here:
           self.send(self.class.processor, context, task)
 
@@ -87,6 +98,8 @@ module Distribot
 
         def enumerate_tasks(message)
           context = OpenStruct.new(message)
+          workflow = Distribot::Workflow.find( context.workflow_id )
+          return if workflow.paused? || workflow.canceled?
           self.send(self.class.enumerator, context) do |tasks|
             task_counter = message[:task_counter]
             Distribot.redis.incrby task_counter, tasks.count
