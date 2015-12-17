@@ -41,9 +41,8 @@ def configure_rspec
     end
 
     config.before :suite do
-      Distribot.redis.flushdb
       WebMock.enable!
-      WebMock.disable_net_connect!(:allow_localhost => true)
+      WebMock.disable_net_connect!(:allow_localhost => false)
     end
 
     config.after :suite do

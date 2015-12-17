@@ -80,16 +80,17 @@ end
 
   * Break this project into smaller parts.
     * gem code
+      * should not require infrastructure to run tests
       * enough infrastructure to run the code
     * small running environment which uses the gem
       * engine
       * worker
       * controller
-      * infra
-        * redis
-        * rabbitmq
-        * elasticsearch
-        * kibana
+      * ~~infra~~
+        * ~~redis~~
+        * ~~rabbitmq~~
+        * ~~elasticsearch~~
+        * ~~kibana~~
   * status dashboard
     * show running workflows
 

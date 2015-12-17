@@ -10,17 +10,14 @@ require 'wrest'
 module Distribot
 
   class Connector
-    attr_accessor :connection_args, :bunny, :channel
-    def initialize(connection_args={})
-      self.connection_args = connection_args
-      self.bunny = Bunny.new(self.connection_args)
-      self.bunny.start
-      self.channel = self.bunny.create_channel
-      self.channel.prefetch(1)
+    attr_accessor :amqp_url, :bunny, :channel
+    def initialize(amqp_url='amqp://localhost:5672')
+      self.amqp_url = amqp_url
+      setup
     end
 
     def queues
-      uri = URI.parse( connection_args)
+      uri = URI.parse(amqp_url)
       uri.scheme = 'http'
       uri.port = 15672
       uri.path = '/api/queues'
@@ -29,6 +26,14 @@ module Distribot
 
     def logger
       Distribot.logger
+    end
+
+    private
+    def setup
+      self.bunny = Bunny.new(self.amqp_url)
+      self.bunny.start
+      self.channel = self.bunny.create_channel
+      self.channel.prefetch(1)
     end
   end
 
@@ -86,13 +91,10 @@ module Distribot
   end
 
   class BunnyConnector < Connector
-    attr_accessor :subscribers, :multi_subscribers, :channel
+    attr_accessor :subscribers, :channel
     def initialize(*args)
       super(*args)
       self.subscribers = [ ]
-      self.multi_subscribers = [ ]
-      self.bunny = Bunny.new(self.connection_args)
-      self.bunny.start
     end
 
     def channel
@@ -124,7 +126,7 @@ module Distribot
         self.channel.queue(topic, auto_delete: true, durable: true)
       end
       logger.debug "publish(#{topic} -> #{message})"
-      self.channel.default_exchange.publish message.to_json, routing_key: topic
+      self.channel.default_exchange.publish message.to_json, routing_key: queue.name
     end
 
     def broadcast(topic, message)
@@ -134,6 +136,10 @@ module Distribot
     end
 
     private
+    def setup
+      self.bunny = Bunny.new(self.amqp_url)
+      self.bunny.start
+    end
     def stubbornly task, &block
       result = nil
       while true do
