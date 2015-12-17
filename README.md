@@ -50,7 +50,7 @@ end
       "transitions_to": "finished",
       "handlers": [
         {
-          "name": PageDownloader",
+          "name": "PageDownloader",
           "version": "~> 1.2"
         }
       ]
