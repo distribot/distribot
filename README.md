@@ -68,10 +68,10 @@ end
     * ~~cancel~~
     * ~~pause~~
     * ~~resume~~
-  * Handler versioning
-    * semver
-    * specify handler versions in workflow definitions
-      * similar to gemfile
+  * ~~Handler versioning~~
+    * ~~semver~~
+    * ~~specify handler versions in workflow definitions~~
+      * ~~similar to gemfile~~
 
 ### Organization
 
