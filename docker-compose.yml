@@ -48,7 +48,7 @@ worker:
   working_dir: /var/www/distribot
   links:
     - infra
-  command: bash -c "./provision/nodes.sh && bundle exec examples/worker & bundle exec examples/worker & sudo tail -f /var/log/td-agent/td-agent.log"
+  command: bash -c "./provision/nodes.sh && sudo tail -f /var/log/td-agent/td-agent.log"
   # "
 
 controller:

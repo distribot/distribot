@@ -31,13 +31,9 @@ module Distribot
         end
 
         def self.enumeration_queue
-#          "distribot.workflow.handler.#{self}.#{version}.enumerate"
-          "distribot.workflow.handler.#{self}.enumerate"
+          "distribot.workflow.handler.#{self}.#{version}.enumerate"
         end
-        def self.process_queue
-#          "distribot.workflow.handler.#{self}.#{version}.process"
-          "distribot.workflow.handler.#{self}.process"
-        end
+
         attr_accessor :task_consumers
 
         def run
@@ -66,7 +62,7 @@ module Distribot
         end
 
         def self.task_queue
-          "distribot.workflow.handler.#{self}.tasks"
+          "distribot.workflow.handler.#{self}.#{version}.tasks"
         end
 
         def subscribe_to_task_queue
