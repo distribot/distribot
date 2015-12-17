@@ -49,7 +49,10 @@ end
       "name": "fetching-pages",
       "transitions_to": "finished",
       "handlers": [
-        "PageDownloader"
+        {
+          "name": PageDownloader",
+          "version": "~> 1.2"
+        }
       ]
     },
     {
