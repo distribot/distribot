@@ -8,6 +8,7 @@ PATH
       eye
       logstash-logger
       redis
+      semantic
       wrest
 
 GEM
@@ -86,6 +87,7 @@ GEM
       rspec-support (~> 3.4.0)
     rspec-support (3.4.1)
     safe_yaml (1.0.4)
+    semantic (1.4.1)
     shoulda-matchers (3.0.1)
       activesupport (>= 4.0.0)
     sigar (0.7.3)

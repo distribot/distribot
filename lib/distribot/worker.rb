@@ -8,6 +8,7 @@ module Distribot
     def self.included(klass)
 
       klass.class_eval do
+        @@version ||= '0.0.0'
         def self.enumerate_with(callback)
           @@enumerator = callback
         end
@@ -30,9 +31,11 @@ module Distribot
         end
 
         def self.enumeration_queue
+#          "distribot.workflow.handler.#{self}.#{version}.enumerate"
           "distribot.workflow.handler.#{self}.enumerate"
         end
         def self.process_queue
+#          "distribot.workflow.handler.#{self}.#{version}.process"
           "distribot.workflow.handler.#{self}.process"
         end
         attr_accessor :task_consumers
