@@ -28,9 +28,12 @@ module Example
         },
         {
           name: 'part1',
-          handlers: %w(
-            HardWorker
-          ),
+          handlers: [
+            {
+              name: 'HardWorker',
+              version: '~> 1.0'
+            }
+          ],
           transitions_to: 'part2'
         },
         {

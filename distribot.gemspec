@@ -28,4 +28,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'bunny'
   spec.add_dependency 'redis'
   spec.add_dependency 'logstash-logger'
+  spec.add_dependency 'wrest'
+  spec.add_dependency 'semantic'
 end

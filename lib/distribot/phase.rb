@@ -10,11 +10,20 @@ module Distribot
                   :handlers
 
     def initialize(attrs={})
-      attrs[:handlers] ||= [ ]
       attrs.each do |key,val|
+        next if key.to_s == 'handlers'
         self.send("#{key}=", val)
       end
       self.name = name
+      self.handlers = [ ]
+      attrs[:handlers] ||= [ ]
+      attrs[:handlers].each do |handler|
+        if handler.is_a? Hash
+          self.handlers.push( PhaseHandler.new handler )
+        else
+          self.handlers.push( PhaseHandler.new name: handler )
+        end
+      end
     end
 
     def to_hash
