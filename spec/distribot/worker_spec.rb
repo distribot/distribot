@@ -7,6 +7,7 @@ describe Distribot::Worker do
       eval <<-EOF
 class #{@klass}
   include Distribot::Worker
+  version '1.1.1'
 end
       EOF
     end
@@ -25,10 +26,12 @@ end
       expect(Kernel.const_get(@klass).send :processor).to eq 'foo'
     end
     it 'adds an enumeration_queue accessor' do
-      expect(Kernel.const_get(@klass).send :enumeration_queue).to eq "distribot.workflow.handler.#{@klass}.enumerate"
+      @klass_ref = Kernel.const_get(@klass)
+      expect(@klass_ref.send :enumeration_queue).to eq "distribot.workflow.handler.#{@klass}.#{@klass_ref.version}.enumerate"
     end
-    it 'adds a process_queue accessor' do
-      expect(Kernel.const_get(@klass).send :process_queue).to eq "distribot.workflow.handler.#{@klass}.process"
+    it 'adds a task_queue accessor' do
+      @klass_ref = Kernel.const_get(@klass)
+      expect(@klass_ref.send :task_queue).to eq "distribot.workflow.handler.#{@klass}.#{@klass_ref.version}.tasks"
     end
   end
 

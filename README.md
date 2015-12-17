@@ -68,10 +68,10 @@ end
     * ~~cancel~~
     * ~~pause~~
     * ~~resume~~
-  * Handler versioning
-    * semver
-    * specify handler versions in workflow definitions
-      * similar to gemfile
+  * ~~Handler versioning~~
+    * ~~semver~~
+    * ~~specify handler versions in workflow definitions~~
+      * ~~similar to gemfile~~
 
 ### Organization
 
@@ -89,3 +89,11 @@ end
         * kibana
   * status dashboard
     * show running workflows
+
+
+## Notes
+
+Clear out queues:
+
+`sudo rabbitmqctl list_queues | grep distribot | awk '{print $1}' | xargs -I qn rabbitmqadmin delete queue name=qn`
+

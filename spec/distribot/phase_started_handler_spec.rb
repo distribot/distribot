@@ -48,14 +48,26 @@ describe Distribot::PhaseStartedHandler do
             phases: [{
               name: 'phase1',
               is_initial: true,
-              handlers: ['FooHandler']
+              handlers: [
+                {
+                  name: 'FooHandler',
+                  version: '1.0.1'
+                }
+              ]
             }]
           )
           expect(Distribot::Workflow).to receive(:find).with(@workflow.id){ @workflow }
-
-          enumerate_queue = 'distribot.workflow.handler.FooHandler.enumerate'
-          process_queue = 'distribot.workflow.handler.FooHandler.process'
-          task_queue = 'distribot.workflow.handler.FooHandler.tasks'
+          expect_any_instance_of(Distribot::Connector).to receive(:queues) do
+            [
+              'distribot.workflow.handler.FooHandler.1.0.1.enumerate',
+              'distribot.workflow.handler.FooHandler.2.0.1.enumerate',
+              'distribot.workflow.handler.FooHandler.1.0.1.tasks',
+              'distribot.workflow.handler.FooHandler.2.0.1.tasks'
+            ]
+          end
+          enumerate_queue = 'distribot.workflow.handler.FooHandler.1.0.1.enumerate'
+          process_queue = 'distribot.workflow.handler.FooHandler1.0.1.process'
+          task_queue = 'distribot.workflow.handler.FooHandler.1.0.1.tasks'
           finished_queue = 'distribot.workflow.task.finished'
           task_counter = 'distribot.workflow.' + @workflow.id + '.phase1.FooHandler.finished'
 

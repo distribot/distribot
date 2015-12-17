@@ -4,6 +4,8 @@ require 'securerandom'
 require 'bunny'
 require 'byebug'
 require 'active_support/json'
+require 'uri'
+require 'wrest'
 
 module Distribot
 
@@ -15,6 +17,14 @@ module Distribot
       self.bunny.start
       self.channel = self.bunny.create_channel
       self.channel.prefetch(1)
+    end
+
+    def queues
+      uri = URI.parse( connection_args)
+      uri.scheme = 'http'
+      uri.port = 15672
+      uri.path = '/api/queues'
+      uri.to_s.to_uri.get.deserialize.map{|x| x['name']}
     end
 
     def logger

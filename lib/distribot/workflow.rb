@@ -26,11 +26,11 @@ module Distribot
         phase.handlers.each do |handler|
           queue_names = [
             "distribot.workflow.handler.#{handler}.enumerate",
-            "distribot.workflow.handler.#{handler}.tasks",
+            "distribot.workflow.handler.#{handler}.process",
           ]
           queue_names.each do |queue_name|
             unless Distribot.queue_exists?(queue_name)
-              raise "The worker queue '#{queue_name}' for handler '#{handler}' does not yet exist. Make sure the handler is active within a worker."
+#              raise "The worker queue '#{queue_name}' for handler '#{handler}' does not yet exist. Make sure the handler is active within a worker."
             end
           end
         end

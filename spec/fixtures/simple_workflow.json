@@ -12,7 +12,10 @@
       "transitions_to": "fetching-pages",
       "on_error_transition_to": "error",
       "handlers": [
-        "GoogleSearcher"
+        {
+          "name": "GoogleSearcher",
+          "version": "~> 1.0"
+        }
       ]
     },
     {
