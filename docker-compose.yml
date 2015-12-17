@@ -1,17 +1,12 @@
 
 infra:
   image: distribot/infra
-  # build: .
-  # dockerfile: ./Dockerfile
-  volumes:
-    - ./:/var/www/distribot
   environment:
     - TERM=xterm
     - RABBITMQ_USERNAME=distribot
     - RABBITMQ_PASSWORD=distribot
   working_dir: /var/www/distribot
   command: bash -c "./provision/infra.sh && tail -f /dev/null"
-  # "
   ports:
     - 5672
     - 15672
