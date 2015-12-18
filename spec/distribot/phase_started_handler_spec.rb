@@ -1,10 +1,6 @@
 require 'spec_helper'
 
 describe Distribot::PhaseStartedHandler do
-  before do
-    Distribot.stub(:subscribe)
-    Distribot.stub(:publish!)
-  end
   describe 'definition' do
     it 'subscribes to the correct queue' do
       expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.phase.started'
@@ -13,6 +9,7 @@ describe Distribot::PhaseStartedHandler do
       expect(Distribot::Handler.handler_for(described_class)).to eq :callback
     end
     it 'has a method matching the handler name' do
+      expect(Distribot).to receive(:subscribe)
       expect(described_class.new).to respond_to :callback
     end
   end
@@ -37,6 +34,7 @@ describe Distribot::PhaseStartedHandler do
             workflow_id: @workflow.id,
             phase: 'phase1'
           })
+          expect(Distribot).to receive(:subscribe)
           described_class.new.callback(workflow_id: @workflow.id, phase: 'phase1')
         end
       end
@@ -57,13 +55,17 @@ describe Distribot::PhaseStartedHandler do
             }]
           )
           expect(Distribot::Workflow).to receive(:find).with(@workflow.id){ @workflow }
-          expect_any_instance_of(Distribot::Connector).to receive(:queues) do
-            [
-              'distribot.workflow.handler.FooHandler.1.0.1.enumerate',
-              'distribot.workflow.handler.FooHandler.2.0.1.enumerate',
-              'distribot.workflow.handler.FooHandler.1.0.1.tasks',
-              'distribot.workflow.handler.FooHandler.2.0.1.tasks'
-            ]
+          expect(Distribot).to receive(:connector) do
+            connector = double('connector')
+            expect(connector).to receive(:queues) do
+              [
+                'distribot.workflow.handler.FooHandler.1.0.1.enumerate',
+                'distribot.workflow.handler.FooHandler.2.0.1.enumerate',
+                'distribot.workflow.handler.FooHandler.1.0.1.tasks',
+                'distribot.workflow.handler.FooHandler.2.0.1.tasks'
+              ]
+            end
+            connector
           end
           enumerate_queue = 'distribot.workflow.handler.FooHandler.1.0.1.enumerate'
           process_queue = 'distribot.workflow.handler.FooHandler1.0.1.process'
@@ -78,6 +80,7 @@ describe Distribot::PhaseStartedHandler do
             finished_queue: finished_queue,
             task_counter: task_counter
           })
+          expect(Distribot).to receive(:subscribe)
         end
         it 'publishes and broadcasts to the correct queues with the correct params' do
           described_class.new.callback(workflow_id: @workflow.id, phase: 'phase1')
