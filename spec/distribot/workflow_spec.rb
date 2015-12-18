@@ -15,15 +15,12 @@ describe Distribot::Workflow do
 
   describe '#redis_id' do
     before do
-      expect(SecureRandom).to receive(:uuid){ 'xxxxx' }
       @workflow = Distribot::Workflow.new(
-        name: @json[:name],
-        phases: @json[:phases]
+        id: 'fake-id'
       )
-      @workflow.save!
     end
     it 'returns the redis id' do
-      expect(@workflow.redis_id).to eq 'distribot-workflow:' + 'xxxxx'
+      expect(@workflow.redis_id).to eq 'distribot-workflow:' + 'fake-id'
     end
   end
 
@@ -34,79 +31,58 @@ describe Distribot::Workflow do
         phases: @json[:phases]
       )
     end
-    context 'when a callback is provided' do
-      before do
-        # We set the id with a V4 uuid:
-        @id = 'insecure-non-random-uuid'
-        expect(SecureRandom).to receive(:uuid){ @id }
-        expect(@workflow).to receive(:redis_id){'redis-id'}
-
-        # We check for the pre-existence of the workflow:
-        expect(@workflow).to receive(:redis).ordered do
-          redis = double('redis1')
-          # Say it does not exist already:
-          expect(redis).to receive(:keys).with('redis-id:definition'){ [ ] }
-          redis
+    context 'when saving' do
+      context 'fails' do
+        context 'because the workflow already has an id' do
+          before do
+            @workflow.id = 'some-id'
+          end
+          it 'raises an error' do
+            expect{@workflow.save!}.to raise_error StandardError
+          end
         end
-
-        expect(@workflow).to receive(:redis).ordered do
-          redis = double('redis2')
-          # Say it does not exist already:
-          expect(redis).to receive(:set).with('redis-id:definition', anything)
-          redis
-        end
-
-        # We publish our existence:
-        expect(Distribot).to receive(:publish!).with('distribot.workflow.created', {
-          workflow_id: @id
-        })
-
-        # Add a transition in the database:
-        expect(@workflow).to receive(:current_phase){ 'phase1' }
-        expect(@workflow).to receive(:add_transition).with(hash_including(to: 'phase1'))
       end
-    end
-    context 'when no callback is provided' do
-      before do
-        # We set the id with a V4 uuid:
-        id = 'insecure-non-random-uuid'
-        expect(SecureRandom).to receive(:uuid){ id }
-        expect(@workflow).to receive(:id=).with(id).and_call_original
-        expect(@workflow).to receive(:redis_id){'redis-id'}
+      context 'succeeds' do
+        before do
+          # Fake id:
+          expect(SecureRandom).to receive(:uuid){ 'xxx' }
 
-        # We check for the pre-existence of the workflow:
-        expect(@workflow).to receive(:redis).ordered do
-          redis = double('redis1')
-          # Say it does not exist already:
-          expect(redis).to receive(:get).with('redis-id:definition')
-          redis
+          # Redis-saving:
+          redis = double('redis')
+          expect(redis).to receive(:set).with('distribot-workflow:xxx:definition', anything)
+          expect(redis).to receive(:sadd).with('distribot.workflows.active', 'xxx')
+          expect(@workflow).to receive(:redis).exactly(2).times{ redis }
+
+          # Transition-making:
+          expect(@workflow).to receive(:current_phase){ 'start' }
+          expect(@workflow).to receive(:add_transition).with(hash_including(to: 'start'))
+
+          # Announcement-publishing:
+          expect(Distribot).to receive(:publish!).with('distribot.workflow.created', {
+            workflow_id: 'xxx'
+          })
         end
-
-        expect(@workflow).to receive(:redis).ordered do
-          redis = double('redis2')
-          # Say it does not exist already:
-          expect(redis).to receive(:set).with('redis-id:definition', anything)
-          redis
+        context 'when a callback is provided' do
+          before do
+            expect(Thread).to receive(:new) do |&block|
+              block.call
+            end
+            expect(@workflow).to receive(:finished?).ordered{false}
+            expect(@workflow).to receive(:finished?).ordered{true}
+          end
+          it 'waits until finished, then calls the callback with {workflow_id: self.id}' do
+            @callback_args = nil
+            @workflow.save! do |info|
+              @callback_args = info
+            end
+            expect(@callback_args).to eq(workflow_id: 'xxx')
+          end
         end
-
-        expect(@workflow).to receive(:redis).ordered do
-          redis = double('redis2')
-          # Say it does not exist already:
-          expect(redis).to receive(:sadd).with('distribot.workflows.active', id)
-          redis
+        context 'when no callback is provided' do
+          it 'saves it in redis' do
+            @workflow.save!
+          end
         end
-
-        # We publish our existence:
-        expect(Distribot).to receive(:publish!).with('distribot.workflow.created', {
-          workflow_id: id
-        })
-
-        # Add a transition in the database:
-        expect(@workflow).to receive(:current_phase){ 'phase1' }
-        expect(@workflow).to receive(:add_transition).with(hash_including(to: 'phase1'))
-      end
-      it 'saves it in redis' do
-        @workflow.save!
       end
     end
   end
@@ -122,26 +98,39 @@ describe Distribot::Workflow do
   end
 
   describe '.find' do
+    before do
+      expect(Distribot).to receive(:redis_id){ 'fake-redis-id' }
+      expect(described_class).to receive(:redis) do
+        redis = double('redis')
+        expect(redis).to receive(:get).with('fake-redis-id:definition'){ @stored_json }
+        redis
+      end
+    end
     context 'when it can be found' do
       before do
-        @workflow = Distribot::Workflow.create!(name: 'testy', phases: [{is_initial: true, name: 'pending'} ])
+        @stored_json = @json.to_json
       end
       it 'returns the correct workflow' do
-        found = Distribot::Workflow.find(@workflow.id)
-        expect(found).to be_a Distribot::Workflow
-        expect(found.id).to eq @workflow.id
+        expect(described_class.find('any-id')).to be_a described_class
       end
     end
     context 'when it cannot be found' do
+      before do
+        @stored_json = nil
+      end
       it 'returns nil' do
-        expect(Distribot::Workflow.find('tgehwbn')).to be_nil
+        expect(described_class.find('any-id')).to be_nil
       end
     end
   end
 
   describe '#phase(name)' do
     before do
-      @workflow = Distribot::Workflow.create!(name: 'testy', phases: [{is_initial: true, name: 'testy'} ])
+      @workflow = Distribot::Workflow.new(
+        id: 'xxx',
+        name: 'testy',
+        phases: [{is_initial: true, name: 'testy'} ]
+      )
     end
     context 'when the phase' do
       context 'exists' do
@@ -158,51 +147,92 @@ describe Distribot::Workflow do
   end
 
   describe '#transition_to!(:phase_name)' do
-    before do
-      @id = SecureRandom.uuid
-      @workflow = Distribot::Workflow.new(
-        id: @id,
-        name: @json[:name],
-        phases: @json[:phases]
-      )
-      @workflow.save!
-    end
-    it 'saves it in redis' do
-      @workflow.transition_to! 'searching'
-      expect(@workflow.transitions.map{|x| x[:to]}).to include 'searching'
+    context 'when the workflow' do
+      before do
+        @workflow = Distribot::Workflow.new(
+          id: 'xxx',
+          name: 'testy',
+          phases: [
+            {is_initial: true, name: 'start'},
+            {is_final: true, name: 'finish'},
+          ]
+        )
+      end
+      context 'did not have a previous phase' do
+        before do
+          @next_phase = 'start'
+          expect(@workflow).to receive(:transitions){ [ ] }
+          expect(Distribot).to receive(:publish!).with('distribot.workflow.phase.started', {
+            workflow_id: @workflow.id,
+            phase: @next_phase
+          })
+        end
+        it 'stores a transition from nil to the new phase' do
+          expect(@workflow).to receive(:add_transition).with(hash_including(from: nil, to: @next_phase))
+          @workflow.transition_to!(@next_phase)
+        end
+      end
+      context 'had a previous phase' do
+        before do
+          @next_phase = 'finish'
+          expect(@workflow).to receive(:transitions) do
+            [
+              {from: nil, to: 'start'}
+            ]
+          end
+          expect(Distribot).to receive(:publish!).with('distribot.workflow.phase.started', {
+            workflow_id: @workflow.id,
+            phase: @next_phase
+          })
+        end
+        it 'stores a transition from the previous phase to the new phase' do
+          expect(@workflow).to receive(:add_transition).with(hash_including(from: 'start', to: @next_phase))
+          @workflow.transition_to!(@next_phase)
+        end
+      end
     end
   end
 
   describe '#current_phase' do
     before do
       @workflow = Distribot::Workflow.new(
+        id: 'xxx',
         name: 'foobar',
         phases: [
-          {name: 'step1', is_initial: true},
-          {name: 'step2', is_final: true},
+          {name: 'start', is_initial: true},
+          {name: 'finish', is_final: true},
         ]
       )
-      @workflow.save!
     end
-    context 'when the workflow is new' do
-      it 'returns the first phase marked with is_initial=true' do
-        expect(@workflow.current_phase).to eq 'step1'
+    context 'when the workflow' do
+      context 'has previous transitions' do
+        before do
+          expect(@workflow).to receive(:transitions) do
+            [
+              OpenStruct.new(from: nil,     to: 'start',  timestamp: 60.seconds.ago.to_i ),
+              OpenStruct.new(from: 'start', to: 'finish', timestamp: 30.seconds.ago.to_i )
+            ]
+          end
+        end
+        it 'returns the "to" value of the latest transition' do
+          expect(@workflow.current_phase).to eq 'finish'
+        end
       end
-    end
-    context 'when the workflow has previous transitions' do
-      before do
-        @workflow.transition_to! 'step2'
-      end
-      it 'returns the latest phase the workflow transitioned into' do
-        expect(@workflow.current_phase).to eq 'step2'
+      context 'has no previous transitions' do
+        before do
+          expect(@workflow).to receive(:transitions){ [ ] }
+        end
+        it 'returns the first is_initial:true phase name' do
+          expect(@workflow.current_phase).to eq 'start'
+        end
       end
     end
   end
 
   describe '#next_phase' do
     before do
-      expect(Distribot).to receive(:publish!).at_least(1).times
-      @workflow = Distribot::Workflow.create!(
+      @workflow = Distribot::Workflow.new(
+        id: 'xxx',
         name: 'foobar',
         phases: [
           {name: 'step1', is_initial: true, transitions_to: 'step2'},
@@ -211,13 +241,16 @@ describe Distribot::Workflow do
       )
     end
     context 'when there is a next phase' do
+      before do
+        expect(@workflow).to receive(:current_phase){ 'step1' }
+      end
       it 'returns the next phase name' do
         expect(@workflow.next_phase).to eq 'step2'
       end
     end
     context 'when there is no next phase' do
       before do
-        @workflow.transition_to! 'step2'
+        expect(@workflow).to receive(:current_phase){ 'step2' }
       end
       it 'returns nil' do
         expect(@workflow.next_phase).to be_nil

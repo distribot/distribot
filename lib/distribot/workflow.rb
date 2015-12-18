@@ -61,26 +61,32 @@ module Distribot
     end
 
     def save!(&block)
+      raise StandardError.new('Cannot re-save a workflow') if self.id
       self.id = SecureRandom.uuid
       record_id = self.redis_id + ':definition'
-      is_new = redis.get(record_id).to_s == ''
-      self.created_at = Time.now.to_f if is_new
+      self.created_at = Time.now.to_f
+
+      # Actually save the record:
       redis.set record_id, serialize
+
+      # Transition into the first phase:
+      self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
+
+      # Add our id to the list of active workflows:
       redis.sadd 'distribot.workflows.active', self.id
 
-      if is_new
-        self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
-        Distribot.publish! 'distribot.workflow.created', {
-          workflow_id: self.id
-        }
-        if block_given?
-          Thread.new do
-            while true do
-              sleep 1
-              if self.finished?
-                block.call( workflow_id: self.id )
-                break
-              end
+      # Announce our arrival to the rest of the system:
+      Distribot.publish! 'distribot.workflow.created', {
+        workflow_id: self.id
+      }
+
+      if block_given?
+        Thread.new do
+          loop do
+            sleep 1
+            if self.finished?
+              block.call( workflow_id: self.id )
+              break
             end
           end
         end
@@ -89,7 +95,7 @@ module Distribot
 
     def self.find(id)
       redis_id = Distribot.redis_id("workflow", id)
-      raw_json = Distribot.redis.get( "#{redis_id}:definition" ) or return
+      raw_json = redis.get( "#{redis_id}:definition" ) or return
       self.new(
         JSON.parse( raw_json, symbolize_names: true )
       )
@@ -188,8 +194,12 @@ module Distribot
 
     private
 
-    def redis
+    def self.redis
       Distribot.redis
+    end
+
+    def redis
+      self.class.redis
     end
 
     def serialize
