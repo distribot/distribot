@@ -142,7 +142,7 @@ module Distribot
     end
     def stubbornly task, &block
       result = nil
-      while true do
+      loop do
         begin
           result = block.call
           break
