@@ -104,6 +104,45 @@ end
         end
       end
     end
+    describe '#enumerate_tasks(message)' do
+      before do
+        @klass_ref = Kernel.const_get(@klass)
+        @worker = @klass_ref.new
+      end
+      context 'when the workflow' do
+        before do
+          @workflow = double('workflow')
+          expect(Distribot::Workflow).to receive(:find).with( 'xxx' ){ @workflow }
+        end
+        context 'is canceled' do
+          before do
+            expect(@workflow).to receive(:canceled?){ true }
+          end
+          it 'raises an error' do
+            expect{@worker.enumerate_tasks(workflow_id: 'xxx')}.to raise_error Distribot::WorkflowCanceledError
+          end
+        end
+        context 'is not canceled' do
+          before do
+            expect(@workflow).to receive(:canceled?){ false }
+            expect(@worker).to receive(:enumerate) do |&block|
+              @callback = block
+            end
+          end
+          it 'calls the task enumerator method, then accounts for the tasks it returns' do
+            @worker.enumerate_tasks(workflow_id: 'xxx', task_counter: 'task.counter' )
+            redis = double('redis')
+            expect(redis).to receive(:incrby).with(anything, 2)
+            expect(redis).to receive(:incrby).with(anything, 2)
+            expect(Distribot).to receive(:redis).exactly(2).times{ redis }
+            expect(Distribot).to receive(:publish!).exactly(2).times
+
+            # Finally:
+            @callback.call([{id: 1}, {id: 2}])
+          end
+        end
+      end
+    end
     describe '#subscribe_to_task_queue' do
       it 'subscribes to the task queue for this $workflow.$phase.$handler so it can consume them, and stores the consumer for cancelation later' do
         worker = @class_ref.new
