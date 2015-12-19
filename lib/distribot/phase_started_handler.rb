@@ -1,8 +1,6 @@
 
 module Distribot
-
   require 'semantic'
-
   class PhaseStartedHandler
     include Distribot::Handler
     subscribe_to 'distribot.workflow.phase.started', handler: :callback
