@@ -66,7 +66,7 @@ end
     describe '#prepare_for_enumeration' do
       before do
         @worker = @class_ref.new
-        @workflow = Distribot::Workflow.create!(phases: [{name: 'start', is_initial: true}])
+        @workflow = Distribot::Workflow.new(id: 'xxx', phases: [{name: 'start', is_initial: true}])
       end
       it 'prepares for enumeration' do
         message = {
@@ -80,9 +80,7 @@ end
           @callback = block
         end
 
-        expect(@worker).to receive(:enumerate_tasks).with(message).and_call_original
-        expect(Distribot).to receive(:publish!).ordered.with('task-queue', hash_including(id: 'job1'))
-        expect(Distribot).to receive(:publish!).ordered.with('task-queue', hash_including(id: 'job2'))
+        expect(@worker).to receive(:enumerate_tasks).with(message)
 
         # Finally:
         @worker.prepare_for_enumeration
@@ -116,10 +114,13 @@ end
     describe '#process_single_task(context, task)' do
       it 'calls the worker\'s processor callback, then announces that the task has been completed' do
         worker = @class_ref.new
-        @workflow = Distribot::Workflow.create!(phases: [{name: 'start', is_initial: true}])
+        workflow_id = 'xxx'
+        expect(Distribot::Workflow).to receive(:find).with(workflow_id) do
+          Distribot::Workflow.new(id: 'xxx', phases: [{name: 'start', is_initial: true}])
+        end
         task = {foo: SecureRandom.uuid}
         context = OpenStruct.new(
-          workflow_id: @workflow.id,
+          workflow_id: workflow_id,
           phase: 'phase1',
           finished_queue: 'the-finished-queue'
         )
