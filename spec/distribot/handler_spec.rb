@@ -23,9 +23,10 @@ describe Distribot::Handler do
         end
       end
       EOF
-      Kernel.const_get(@klass_name).new
-      expect(Distribot::Handler.handler_for(@klass_name)).to eq :callback
-      expect(Distribot::Handler.queue_for(@klass_name)).to eq @queue_name
+      @klass_ref = Kernel.const_get(@klass_name)
+      @klass_ref.new
+      expect(@klass_ref.handler).to eq :callback
+      expect(@klass_ref.queue).to eq @queue_name
     end
   end
 end

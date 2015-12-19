@@ -1,33 +1,52 @@
 
 module Distribot
   module Handler
-    @@queues = { }
-    @@handlers = { }
-    @@subscribe_args = { }
+
+    attr_accessor :queue_name, :consumers
+
+    def self.included(base)
+      base.extend ClassMethods
+    end
+
+    def initialize
+      self.consumers = [ ]
+      self.queue_name = self.class.queue
+      handler = self.class.handler
+      Distribot.subscribe(self.queue_name, self.class.subscribe_args) do |message|
+        self.send(handler, message)
+      end
+    end
 
     def self.handler_for(klass)
-      @@handlers[klass.to_s]
+      klass.handler
     end
 
     def self.queue_for(klass)
-      @@queues[klass.to_s]
+      klass.queue
     end
 
-    def self.included(klass)
-      klass.class_eval do
-        attr_accessor :queue_name, :consumers
-        def self.subscribe_to(queue_name, handler_args)
-          @@queues[self.to_s] = queue_name
-          @@handlers[self.to_s] = handler_args.delete :handler
-          @@subscribe_args[self.to_s] = handler_args
-        end
-        def initialize
-          self.consumers = [ ]
-          self.queue_name = @@queues[self.class.to_s]
-          Distribot.subscribe(self.queue_name, @@subscribe_args[self.class.to_s]) do |message|
-            self.send(@@handlers[self.class.to_s], message)
-          end
-        end
+    module ClassMethods
+
+      @@queues = { }
+      @@handlers = { }
+      @@subscribe_args = { }
+
+      def subscribe_to(queue_name, handler_args)
+        @@queues[self] = queue_name
+        @@handlers[self] = handler_args.delete :handler
+        @@subscribe_args[self] = handler_args
+      end
+
+      def handler
+        @@handlers[self]
+      end
+
+      def queue
+        @@queues[self]
+      end
+
+      def subscribe_args
+        @@subscribe_args[self]
       end
     end
   end
