@@ -22,15 +22,32 @@ describe Distribot do
   end
 
   describe '.redis' do
-    before do
-      Distribot.reset_configuration!
-      Distribot.configure do |config|
-        config.redis_url = nil
+    context 'when configuration.redis_url' do
+      context 'is nil' do
+        before do
+          Distribot.reset_configuration!
+          Distribot.configure do |config|
+            config.redis_url = nil
+          end
+        end
+        it 'returns a new Redis instance without argument' do
+          expect(Redis).to receive(:new).with(no_args){ 'HELLO' }
+          expect(Distribot.redis).to eq 'HELLO'
+        end
       end
-    end
-    it 'returns a new Redis instance' do
-      expect(Redis).to receive(:new){ 'HELLO' }
-      expect(Distribot.redis).to eq 'HELLO'
+      context 'is given' do
+        before do
+          @redis_url = 'redis://foo:6379/0'
+          Distribot.reset_configuration!
+          Distribot.configure do |config|
+            config.redis_url = @redis_url
+          end
+        end
+        it 'returns a new Redis instance' do
+          expect(Redis).to receive(:new).with(url: @redis_url){ 'HELLO' }
+          expect(Distribot.redis).to eq 'HELLO'
+        end
+      end
     end
   end
 

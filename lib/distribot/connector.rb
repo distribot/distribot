@@ -8,7 +8,6 @@ require 'uri'
 require 'wrest'
 
 module Distribot
-
   class Connector
     attr_accessor :amqp_url, :bunny, :channel
     def initialize(amqp_url='amqp://localhost:5672')
@@ -21,7 +20,7 @@ module Distribot
       uri.scheme = 'http'
       uri.port = 15672
       uri.path = '/api/queues'
-      uri.to_s.to_uri.get.deserialize.map{|x| x['name']}
+      uri.to_s.to_uri.get.deserialize.map{ |x| x['name'] }
     end
 
     def logger
@@ -31,9 +30,9 @@ module Distribot
     private
     def setup
       self.bunny = Bunny.new(self.amqp_url)
-      self.bunny.start
-      self.channel = self.bunny.create_channel
-      self.channel.prefetch(1)
+      bunny.start
+      self.channel = bunny.create_channel
+      channel.prefetch(1)
     end
   end
 
@@ -58,8 +57,8 @@ module Distribot
 
   class Subscription < ConnectionSharer
     attr_accessor :consumer, :queue
-    def start(topic, options={}, &block)
-      self.queue = self.channel.queue(topic, auto_delete: true, durable: true)
+    def start(topic, options = {}, &block)
+      self.queue = channel.queue(topic, auto_delete: true, durable: true)
       self.consumer = queue.subscribe(options.merge(manual_ack: true)) do |delivery_info, _properties, payload|
         begin
           parsed_message = JSON.parse(payload, symbolize_names: true)
@@ -136,9 +135,10 @@ module Distribot
     end
 
     private
+
     def setup
-      self.bunny = Bunny.new(self.amqp_url)
-      self.bunny.start
+      self.bunny = Bunny.new(amqp_url)
+      bunny.start
     end
     def stubbornly task, &block
       result = nil
