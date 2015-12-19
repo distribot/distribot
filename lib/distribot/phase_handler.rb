@@ -2,14 +2,14 @@
 module Distribot
   class PhaseHandler
     attr_accessor :name, :version
-    def initialize(attrs={})
-      attrs.each do |key,val|
-        self.public_send("#{key}=", val)
+    def initialize(attrs = {})
+      attrs.each do |key, val|
+        public_send("#{key}=", val)
       end
     end
 
     def to_s
-      self.name
+      name
     end
   end
 end

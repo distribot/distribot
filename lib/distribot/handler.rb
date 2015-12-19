@@ -1,7 +1,6 @@
 
 module Distribot
   module Handler
-
     attr_accessor :queue_name, :consumers
 
     def self.included(base)
@@ -9,11 +8,11 @@ module Distribot
     end
 
     def initialize
-      self.consumers = [ ]
+      self.consumers = []
       self.queue_name = self.class.queue
       handler = self.class.handler
-      Distribot.subscribe(self.queue_name, self.class.subscribe_args) do |message|
-        self.send(handler, message)
+      Distribot.subscribe(queue_name, self.class.subscribe_args) do |message|
+        send(handler, message)
       end
     end
 
@@ -26,27 +25,26 @@ module Distribot
     end
 
     module ClassMethods
-
-      @@queues = { }
-      @@handlers = { }
-      @@subscribe_args = { }
+      class << self
+        attr_accessor :queue, :handler, :subscribe_args
+      end
 
       def subscribe_to(queue_name, handler_args)
-        @@queues[self] = queue_name
-        @@handlers[self] = handler_args.delete :handler
-        @@subscribe_args[self] = handler_args
+        @queue = queue_name
+        @handler = handler_args.delete :handler
+        @subscribe_args = handler_args
       end
 
       def handler
-        @@handlers[self]
+        @handler
       end
 
       def queue
-        @@queues[self]
+        @queue
       end
 
       def subscribe_args
-        @@subscribe_args[self]
+        @subscribe_args
       end
     end
   end

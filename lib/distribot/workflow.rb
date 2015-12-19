@@ -4,163 +4,165 @@ module Distribot
   class NotPausedError < StandardError; end
 
   class Workflow
-    attr_accessor :id, :name, :phases, :consumer, :finished_callback_queue, :created_at
+    attr_accessor :id, :phases, :consumer, :finished_callback_queue, :created_at
 
-    def initialize(attrs={})
+    def initialize(attrs = {})
       self.id = attrs[:id]
-      self.name = attrs[:name]
       self.created_at = attrs[:created_at] unless attrs[:created_at].nil?
-      self.phases = [ ]
-      if attrs.has_key? :phases
-        attrs[:phases].each do |options|
-          self.add_phase(options)
-        end
+      self.phases = []
+      (attrs[:phases] || []).each do |options|
+        add_phase(options)
       end
     end
 
-    def self.create!(attrs={})
-      obj = self.new(attrs)
-      obj.save!
-      return obj
+    def self.create!(attrs = {})
+      new(attrs).save!
     end
 
     def save!(&block)
-      raise StandardError.new('Cannot re-save a workflow') if self.id
+      fail StandardError, 'Cannot re-save a workflow' if id
       self.id = SecureRandom.uuid
-      record_id = self.redis_id + ':definition'
+      record_id = redis_id + ':definition'
       self.created_at = Time.now.to_f
 
       # Actually save the record:
       redis.set record_id, serialize
 
       # Transition into the first phase:
-      self.add_transition( :to => self.current_phase, :timestamp => Time.now.utc.to_f )
+      add_transition to: current_phase, timestamp: Time.now.utc.to_f
 
       # Add our id to the list of active workflows:
-      redis.sadd 'distribot.workflows.active', self.id
+      redis.sadd 'distribot.workflows.active', id
 
       # Announce our arrival to the rest of the system:
-      Distribot.publish! 'distribot.workflow.created', {
-        workflow_id: self.id
-      }
+      Distribot.publish! 'distribot.workflow.created', workflow_id: id
 
-      if block_given?
-        Thread.new do
-          loop do
-            sleep 1
-            if self.finished?
-              block.call( workflow_id: self.id )
-              break
-            end
-          end
-        end
-      end
+      wait_for_workflow_to_finish(block) if block_given?
+      self
     end
 
     def self.find(id)
-      redis_id = Distribot.redis_id("workflow", id)
-      raw_json = redis.get( "#{redis_id}:definition" ) or return
-      self.new(
-        JSON.parse( raw_json, symbolize_names: true )
+      redis_id = Distribot.redis_id('workflow', id)
+      raw_json = redis.get("#{redis_id}:definition") || return
+      new(
+        JSON.parse(raw_json, symbolize_names: true)
       )
     end
 
-    def add_phase(options={})
-      self.phases << Phase.new(options)
+    def add_phase(options = {})
+      phases << Phase.new(options)
     end
 
     def phase(name)
-      self.phases.find{|x| x.name == name}
+      phases.find { |x| x.name == name }
     end
 
     def pause!
-      raise NotRunningError.new "Cannot pause unless running" unless self.running?
-      self.add_transition(
-        from: self.current_phase,
+      fail NotRunningError, 'Cannot pause unless running' unless running?
+      add_transition(
+        from: current_phase,
         to: 'paused',
         timestamp: Time.now.utc.to_f
       )
     end
 
     def resume!
-      raise NotPausedError.new "Cannot resume unless paused" unless self.paused?
+      fail NotPausedError, 'Cannot resume unless paused' unless paused?
 
       # Find the last transition before we were paused:
-      prev_phase = self.transitions.reverse.find{|x| x.to != 'paused'}
+      prev_phase = transitions.reverse.find { |x| x.to != 'paused' }
       # Back to where we once belonged
-      self.add_transition(from: 'paused', to: prev_phase.to, timestamp: Time.now.utc.to_f)
+      add_transition(
+        from: 'paused', to: prev_phase.to, timestamp: Time.now.utc.to_f
+      )
     end
 
     def paused?
-      self.current_phase == 'paused'
+      current_phase == 'paused'
     end
 
     def cancel!
-      raise NotRunningError.new "Cannot cancel unless running" unless self.running?
-      self.add_transition(from: self.current_phase, to: 'canceled', timestamp: Time.now.utc.to_f)
+      fail NotRunningError, 'Cannot cancel unless running' unless running?
+      add_transition(
+        from: current_phase, to: 'canceled', timestamp: Time.now.utc.to_f
+      )
     end
 
     def canceled?
-      self.current_phase == 'canceled'
+      current_phase == 'canceled'
     end
 
     def running?
-      ! ( self.paused? || self.canceled? || self.finished? )
+      ! (paused? || canceled? || finished?)
     end
 
     def redis_id
-      @redis_id ||= Distribot.redis_id("workflow", self.id)
+      @redis_id ||= Distribot.redis_id('workflow', id)
     end
 
     def transition_to!(phase)
-      previous_transition = self.transitions.last
+      previous_transition = transitions.last
       prev = previous_transition ? previous_transition[:to] : nil
-      self.add_transition( from: prev, to: phase, timestamp: Time.now.utc.to_f )
-      Distribot.publish! 'distribot.workflow.phase.started', {
-        workflow_id: self.id,
+      add_transition(from: prev, to: phase, timestamp: Time.now.utc.to_f)
+      Distribot.publish!(
+        'distribot.workflow.phase.started',
+        workflow_id: id,
         phase: phase
-      }
+      )
     end
 
     def add_transition(item)
-      redis.sadd(self.redis_id + ':transitions', item.to_json)
+      redis.sadd(redis_id + ':transitions', item.to_json)
     end
 
     def transitions
-      redis.smembers(self.redis_id + ':transitions').map do |item|
+      redis.smembers(redis_id + ':transitions').map do |item|
         OpenStruct.new JSON.parse(item, symbolize_names: true)
       end.sort_by(&:timestamp)
     end
 
     def current_phase
-      ( self.transitions.sort_by(&:timestamp).last.to rescue nil ) || self.phases.find{|x| x.is_initial }.name
+      latest_transition = transitions.last
+      if latest_transition
+        latest_transition.to
+      else
+        phases.find(&:is_initial).name
+      end
     end
 
     def next_phase
-      current = self.current_phase
-      self.phases.find{|x| x.name == current }.transitions_to
+      current = current_phase
+      phases.find { |x| x.name == current }.transitions_to
     end
 
     def finished?
-      self.phase( self.transitions.last.to ).is_final
+      phase(transitions.last.to).is_final
     end
 
-    def stubbornly task, &block
-      result = nil
+    def stubbornly(task, &block)
       loop do
         begin
-          result = block.call
-          break
+          return block.call
         rescue NoMethodError => e
           warn "Error during #{task}: #{e} --- #{e.backtrace.join("\n")}"
           sleep 1
-          next
         end
       end
-      result
     end
 
     private
+
+    def wait_for_workflow_to_finish(block)
+      Thread.new do
+        loop do
+          sleep 1
+          if finished?
+            block.call(workflow_id: id)
+            break
+          end
+        end
+      end
+    end
 
     def self.redis
       Distribot.redis
@@ -176,10 +178,9 @@ module Distribot
 
     def to_hash
       {
-        id: self.id,
-        name: self.name,
-        created_at: self.created_at,
-        phases: self.phases.map(&:to_hash)
+        id: id,
+        created_at: created_at,
+        phases: phases.map(&:to_hash)
       }
     end
   end

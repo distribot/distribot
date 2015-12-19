@@ -31,7 +31,7 @@ describe Distribot::PhaseFinishedHandler do
         context 'and the workflow' do
           context 'has a next phase' do
             before do
-              expect(@workflow).to receive(:next_phase){ 'finish' }
+              expect(@workflow).to receive(:next_phase).exactly(2).times{ 'finish' }
             end
             it 'tells the workflow to transition to the next phase' do
               expect(@workflow).to receive(:transition_to!).with('finish')
