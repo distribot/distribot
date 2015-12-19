@@ -88,9 +88,8 @@ describe Distribot::Workflow do
     before do
       expect_any_instance_of(Distribot::Workflow).to receive(:save!)
     end
-    it 'saves the object and returns it' do
+    it 'saves the object' do
       workflow = Distribot::Workflow.create!(phases: [ ])
-      expect(workflow).to be_a Distribot::Workflow
     end
   end
 
