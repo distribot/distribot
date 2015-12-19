@@ -149,4 +149,35 @@ describe Distribot::BunnyConnector do
       @connector.broadcast(@topic, {hello: :world})
     end
   end
+
+  describe '#stubbornly' do
+    context 'when the block' do
+      before do
+        expect_any_instance_of(described_class).to receive(:setup)
+      end
+      context 'raises an error' do
+        it 'keeps trying forever, until it stops raising an error' do
+          @return_value = SecureRandom.uuid
+          thing = described_class.new
+          @max_tries = 3
+          @total_tries = 0
+          expect(thing.send(:stubbornly, :foo){
+            if @total_tries >= @max_tries
+              @return_value
+            else
+              @total_tries += 1
+              raise Timeout::Error.new
+            end
+          }).to eq @return_value
+        end
+      end
+      context 'does not raise an error' do
+        it 'returns the result of the block' do
+          @return_value = SecureRandom.uuid
+          thing = described_class.new
+          expect(thing.send(:stubbornly, :foo){ @return_value }).to eq @return_value
+        end
+      end
+    end
+  end
 end
