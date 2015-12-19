@@ -1,6 +1,9 @@
 
 # Distribot
 
+[![Code Climate](https://codeclimate.com/github/jdrago999/distribot/badges/gpa.svg)](https://codeclimate.com/github/jdrago999/distribot)
+[![Test Coverage](https://codeclimate.com/github/jdrago999/distribot/badges/coverage.svg)](https://codeclimate.com/github/jdrago999/distribot/coverage)
+
 Work scheduling and distribution engine.
 
 ## Features
