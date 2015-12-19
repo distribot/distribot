@@ -4,11 +4,10 @@ module Distribot
   class NotPausedError < StandardError; end
 
   class Workflow
-    attr_accessor :id, :name, :phases, :consumer, :finished_callback_queue, :created_at
+    attr_accessor :id, :phases, :consumer, :finished_callback_queue, :created_at
 
     def initialize(attrs={})
       self.id = attrs[:id]
-      self.name = attrs[:name]
       self.created_at = attrs[:created_at] unless attrs[:created_at].nil?
       self.phases = [ ]
       if attrs.has_key? :phases
@@ -177,7 +176,6 @@ module Distribot
     def to_hash
       {
         id: self.id,
-        name: self.name,
         created_at: self.created_at,
         phases: self.phases.map(&:to_hash)
       }

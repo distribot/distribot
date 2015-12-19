@@ -6,10 +6,8 @@ describe Distribot::Workflow do
   end
   it 'can be initialized' do
     workflow = Distribot::Workflow.new(
-      name: @json[:name],
       phases: @json[:phases]
     )
-    expect(workflow.name).to eq @json[:name]
     expect(workflow.phases.count).to eq @json[:phases].count
   end
 
@@ -27,7 +25,6 @@ describe Distribot::Workflow do
   describe '#save!' do
     before do
       @workflow = Distribot::Workflow.new(
-        name: @json[:name],
         phases: @json[:phases]
       )
     end
@@ -92,7 +89,7 @@ describe Distribot::Workflow do
       expect_any_instance_of(Distribot::Workflow).to receive(:save!)
     end
     it 'saves the object and returns it' do
-      workflow = Distribot::Workflow.create!(name: 'testy', phases: [ ])
+      workflow = Distribot::Workflow.create!(phases: [ ])
       expect(workflow).to be_a Distribot::Workflow
     end
   end
@@ -128,7 +125,6 @@ describe Distribot::Workflow do
     before do
       @workflow = Distribot::Workflow.new(
         id: 'xxx',
-        name: 'testy',
         phases: [{is_initial: true, name: 'testy'} ]
       )
     end
@@ -151,7 +147,6 @@ describe Distribot::Workflow do
       before do
         @workflow = Distribot::Workflow.new(
           id: 'xxx',
-          name: 'testy',
           phases: [
             {is_initial: true, name: 'start'},
             {is_final: true, name: 'finish'},
@@ -197,7 +192,6 @@ describe Distribot::Workflow do
     before do
       @workflow = Distribot::Workflow.new(
         id: 'xxx',
-        name: 'foobar',
         phases: [
           {name: 'start', is_initial: true},
           {name: 'finish', is_final: true},
@@ -233,7 +227,6 @@ describe Distribot::Workflow do
     before do
       @workflow = Distribot::Workflow.new(
         id: 'xxx',
-        name: 'foobar',
         phases: [
           {name: 'step1', is_initial: true, transitions_to: 'step2'},
           {name: 'step2', is_final: true},
