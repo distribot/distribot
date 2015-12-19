@@ -139,6 +139,7 @@ module Distribot
       self.bunny = Bunny.new(amqp_url)
       bunny.start
     end
+
     def stubbornly(task, &block)
       result = nil
       loop do
