@@ -1,5 +1,8 @@
 
 module Distribot
+  class NotRunningError < StandardError; end
+  class NotPausedError < StandardError; end
+
   class Workflow
     attr_accessor :id, :name, :phases, :consumer, :finished_callback_queue, :created_at
 
@@ -13,45 +16,6 @@ module Distribot
           self.add_phase(options)
         end
       end
-    end
-
-    def validate!
-      # Make sure the phases make a continuous line:
-      self.phases.each do |phase|
-        next if phase.is_final
-        unless (self.phases.map{|x| x.name } - [phase.name]).include? phase.transitions_to
-          raise "Phase '#{phase.name}' transitions to invalid phase '#{phase.transitions_to}'"
-        end
-        # Make sure every handler is actively watched:
-        phase.handlers.each do |handler|
-          queue_names = [
-            "distribot.workflow.handler.#{handler}.enumerate",
-            "distribot.workflow.handler.#{handler}.process",
-          ]
-          queue_names.each do |queue_name|
-            unless Distribot.queue_exists?(queue_name)
-#              raise "The worker queue '#{queue_name}' for handler '#{handler}' does not yet exist. Make sure the handler is active within a worker."
-            end
-          end
-        end
-      end
-
-      # Make sure the engine appears to be running:
-      engine_queues = %w(
-        distribot.workflow.created
-        distribot.workflow.phase.started
-        distribot.workflow.task.finished
-        distribot.workflow.handler.finished
-        distribot.workflow.phase.finished
-        distribot.workflow.finished
-      )
-      missing_queues = engine_queues.reject{|queue| Distribot.queue_exists?(queue) }
-      unless missing_queues.empty?
-        raise "The following engine queues are missing. Ensure their workers are enabled. #{missing_queues.join(", ")}"
-      end
-
-      # Finally:
-      true
     end
 
     def self.create!(attrs={})
@@ -110,17 +74,21 @@ module Distribot
     end
 
     def pause!
-      raise "Cannot pause unless running" unless self.running?
-      self.add_transition(to: 'paused', timestamp: Time.now.utc.to_f)
+      raise NotRunningError.new "Cannot pause unless running" unless self.running?
+      self.add_transition(
+        from: self.current_phase,
+        to: 'paused',
+        timestamp: Time.now.utc.to_f
+      )
     end
 
     def resume!
-      raise "Cannot resume unless paused" unless self.paused?
+      raise NotPausedError.new "Cannot resume unless paused" unless self.paused?
 
       # Find the last transition before we were paused:
       prev_phase = self.transitions.reverse.find{|x| x.to != 'paused'}
       # Back to where we once belonged
-      self.add_transition(to: prev_phase.to, timestamp: Time.now.utc.to_f)
+      self.add_transition(from: 'paused', to: prev_phase.to, timestamp: Time.now.utc.to_f)
     end
 
     def paused?
@@ -128,8 +96,8 @@ module Distribot
     end
 
     def cancel!
-      raise "Cannot cancel unless running" unless self.running?
-      self.add_transition(to: 'canceled', timestamp: Time.now.utc.to_f)
+      raise NotRunningError.new "Cannot cancel unless running" unless self.running?
+      self.add_transition(from: self.current_phase, to: 'canceled', timestamp: Time.now.utc.to_f)
     end
 
     def canceled?
