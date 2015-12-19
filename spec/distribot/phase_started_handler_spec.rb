@@ -60,13 +60,13 @@ describe Distribot::PhaseStartedHandler do
           before do
             expect(@worker).to receive(:best_version).ordered.with(@handlers[0]){ '1.0' }
             expect(@worker).to receive(:best_version).ordered.with(@handlers[1]){ '2.0' }
-            expect(@worker).to receive(:jumpstart_handler).ordered.with(
+            expect(@worker).to receive(:init_handler).ordered.with(
               @workflow,
               @phase,
               @handlers[0],
               '1.0'
             )
-            expect(@worker).to receive(:jumpstart_handler).ordered.with(
+            expect(@worker).to receive(:init_handler).ordered.with(
               @workflow,
               @phase,
               @handlers[1],
@@ -75,6 +75,15 @@ describe Distribot::PhaseStartedHandler do
           end
           it 'jumpstarts each handler' do
             @worker.callback(workflow_id: @workflow.id, phase: 'phase1')
+          end
+        end
+        context 'any of the handlers cannot find a suitable version' do
+          before do
+            expect(@worker).to receive(:best_version)
+            expect(@worker).not_to receive(:init_handler)
+          end
+          it 'raises an exception' do
+            expect{@worker.callback(workflow_id: @workflow.id, phase: 'phase1')}.to raise_error RuntimeError
           end
         end
       end
@@ -119,7 +128,7 @@ describe Distribot::PhaseStartedHandler do
     end
   end
 
-  describe '#jumpstart_handler(workflow, phase, handler, version)' do
+  describe '#init_handler(workflow, phase, handler, version)' do
     before do
       @workflow = Distribot::Workflow.new(id: 'xxx')
       @phase = Distribot::Phase.new(name: 'phase1')
@@ -135,7 +144,7 @@ describe Distribot::PhaseStartedHandler do
       )
     end
     it 'publishes a message for the handler with everything it needs to begin task enumeration' do
-      described_class.new.jumpstart_handler(@workflow, @phase, @handler, @version)
+      described_class.new.init_handler(@workflow, @phase, @handler, @version)
     end
   end
 end
