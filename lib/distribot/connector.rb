@@ -60,7 +60,7 @@ module Distribot
     attr_accessor :consumer, :queue
     def start(topic, options={}, &block)
       self.queue = self.channel.queue(topic, auto_delete: true, durable: true)
-      self.consumer = queue.subscribe(options.merge(manual_ack: true)) do |delivery_info, properties, payload|
+      self.consumer = queue.subscribe(options.merge(manual_ack: true)) do |delivery_info, _properties, payload|
         begin
           parsed_message = JSON.parse(payload, symbolize_names: true)
           block.call( parsed_message )
@@ -79,7 +79,7 @@ module Distribot
     def start(topic, options={}, &block)
       self.queue = self.channel.queue('', exclusive: true, auto_delete: true)
       exchange = self.channel.fanout(topic)
-      self.consumer = queue.bind(exchange).subscribe(options) do |delivery_info, properties, payload|
+      self.consumer = queue.bind(exchange).subscribe(options) do |_delivery_info, _properties, payload|
         begin
           block.call(JSON.parse(payload, symbolize_names: true))
         rescue StandardError => e
@@ -146,7 +146,7 @@ module Distribot
         begin
           result = block.call
           break
-        rescue Timeout::Error => e
+        rescue Timeout::Error
           logger.error "Connection timed out during '#{task}' - retrying in 1sec..."
           sleep 1
           next

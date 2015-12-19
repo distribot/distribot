@@ -22,25 +22,18 @@ class SimpleWorker
   enumerate_with :enumerate
   process_tasks_with :process
 
-  def enumerate(context, &callback)
+  def enumerate(_context, &callback)
     jobs = [ ]
-
     2.times do |chunk|
       max = 5
       jobs << (1..max).to_a.map{|n| {id: SecureRandom.uuid, args: [chunk, n] } }
     end
-#sleep 0.5
     callback.call(jobs.flatten)
   end
 
-  def process(context, job)
-#raise "Test Error" if rand * 100 < 10
-logger.info job.to_s
-# Fail, 10% of the time:
-
-raise "Test Error!" if rand >= 0.9
-
-#    puts "Processing job '#{context.workflow_id}.#{context.phase}.#{self} #{job[:args]}'"
+  def process(_context, job)
+    logger.info job.to_s
+    raise "Test Error!" if rand >= 0.9
     job_time = Distribot.redis.get('difficulty').to_f
     sleep job_time <= 0 ? 3 : job_time
   end

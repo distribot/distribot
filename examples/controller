@@ -118,7 +118,7 @@ Distribot.redis.set('distribot.workflows.running', 0)
 Distribot.redis.set('distribot.workflows.max', max)
 Example.make_workflow "Workflow[1]"
 
-while true
+loop do
   sleep 2
   max = Distribot.redis.get('distribot.workflows.max').to_i
   current = Distribot.redis.get('distribot.workflows.running').to_i
