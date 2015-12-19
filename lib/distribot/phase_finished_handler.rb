@@ -7,7 +7,6 @@ module Distribot
 
     def callback(message)
       workflow = Distribot::Workflow.find( message[:workflow_id] )
-      phase = workflow.phase(message[:phase])
       if workflow.current_phase == message[:phase]
         next_phase = workflow.next_phase
         if next_phase.nil?

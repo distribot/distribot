@@ -3,6 +3,8 @@ is_rake_exec = $0 =~ /\/rake/
 
 unless is_rake_exec
   ENV['RACK_ENV'] = 'test'
+  require 'codeclimate-test-reporter'
+  CodeClimate::TestReporter.start
   require 'simplecov'
   SimpleCov.start do
     add_filter '.vendor/'
@@ -41,9 +43,11 @@ def configure_rspec
     end
 
     config.before :suite do
-      Distribot.redis.flushdb
       WebMock.enable!
-      WebMock.disable_net_connect!(:allow_localhost => true)
+      WebMock.disable_net_connect!(
+        :allow_localhost => false,
+        :allow => 'codeclimate.com'
+      )
     end
 
     config.after :suite do

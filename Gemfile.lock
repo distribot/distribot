@@ -47,6 +47,8 @@ GEM
       timers (>= 4.1.1)
     celluloid-supervision (0.20.5)
       timers (>= 4.1.1)
+    codeclimate-test-reporter (0.4.8)
+      simplecov (>= 0.7.1, < 1.0.0)
     crack (0.4.2)
       safe_yaml (~> 1.0.0)
     diff-lcs (1.2.5)
@@ -119,6 +121,7 @@ PLATFORMS
 DEPENDENCIES
   bundler (~> 1.7)
   byebug
+  codeclimate-test-reporter
   distribot!
   faker
   rake (~> 10.0)
@@ -128,4 +131,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   1.11.0
+   1.11.2

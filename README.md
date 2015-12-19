@@ -1,6 +1,9 @@
 
 # Distribot
 
+[![Code Climate](https://codeclimate.com/github/jdrago999/distribot/badges/gpa.svg)](https://codeclimate.com/github/jdrago999/distribot)
+[![Test Coverage](https://codeclimate.com/github/jdrago999/distribot/badges/coverage.svg)](https://codeclimate.com/github/jdrago999/distribot/coverage)
+
 Work scheduling and distribution engine.
 
 ## Features
@@ -80,16 +83,17 @@ end
 
   * Break this project into smaller parts.
     * gem code
+      * should not require infrastructure to run tests
       * enough infrastructure to run the code
     * small running environment which uses the gem
       * engine
       * worker
       * controller
-      * infra
-        * redis
-        * rabbitmq
-        * elasticsearch
-        * kibana
+      * ~~infra~~
+        * ~~redis~~
+        * ~~rabbitmq~~
+        * ~~elasticsearch~~
+        * ~~kibana~~
   * status dashboard
     * show running workflows
 

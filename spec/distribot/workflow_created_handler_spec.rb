@@ -2,14 +2,6 @@ require 'spec_helper'
 
 describe Distribot::WorkflowCreatedHandler do
   describe 'definition' do
-    before :each do
-      Distribot.stub(:subscribe)
-      Distribot.stub(:publish!)
-      Distribot.stub(:redis) do
-        redis = double('redis')
-        redis
-      end
-    end
     it 'subscribes to the correct queue' do
       expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.created'
     end
@@ -17,6 +9,7 @@ describe Distribot::WorkflowCreatedHandler do
       expect(Distribot::Handler.handler_for(described_class)).to eq :callback
     end
     it 'has a method matching the handler name' do
+      expect(Distribot).to receive(:subscribe)
       expect(described_class.new).to respond_to :callback
     end
   end
@@ -30,9 +23,13 @@ describe Distribot::WorkflowCreatedHandler do
         expect(workflow).to receive(:transition_to!).with('phase2'){ true }
         workflow
       end
+      redis = double('redis')
+      expect(redis).to receive(:incr).with('distribot.workflows.running')
+      expect(Distribot).to receive(:redis){ redis }
+      expect(Distribot).to receive(:subscribe)
     end
     it 'transitions to the next phase' do
-      expect(Distribot::WorkflowCreatedHandler.new.callback(workflow_id: @workflow_id)).to be_truthy
+      expect(described_class.new.callback(workflow_id: @workflow_id)).to be_truthy
     end
   end
 end

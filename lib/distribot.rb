@@ -23,6 +23,12 @@ module Distribot
   @@did_configure = false
   @@connector = nil
 
+  def self.reset_configuration!
+    @@config = OpenStruct.new()
+    @@did_configure = false
+    @@redis = nil
+  end
+
   def self.configure(&block)
     @@did_configure = true
     block.call(configuration)
