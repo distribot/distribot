@@ -68,24 +68,40 @@ end
         @worker = @class_ref.new
         @workflow = Distribot::Workflow.new(id: 'xxx', phases: [{name: 'start', is_initial: true}])
       end
-      it 'prepares for enumeration' do
-        message = {
-          workflow_id: @workflow.id,
-          phase: 'phase1',
-          task_queue: 'task-queue',
-          finished_queue: 'finished-queue',
-          handler: @klass
-        }
-        expect(Distribot).to receive(:subscribe).with(@class_ref.enumeration_queue) do |&block|
-          @callback = block
+      context 'when enumeration' do
+        context 'succeeds' do
+          it 'goes smoothly' do
+            message = {
+              workflow_id: @workflow.id,
+              phase: 'phase1',
+              task_queue: 'task-queue',
+              finished_queue: 'finished-queue',
+              handler: @klass
+            }
+            expect(Distribot).to receive(:subscribe).with(@class_ref.enumeration_queue) do |&block|
+              @callback = block
+            end
+
+            expect(@worker).to receive(:enumerate_tasks).with(message)
+
+            # Finally:
+            @worker.prepare_for_enumeration
+
+            @callback.call(message)
+          end
         end
-
-        expect(@worker).to receive(:enumerate_tasks).with(message)
-
-        # Finally:
-        @worker.prepare_for_enumeration
-
-        @callback.call(message)
+        context 'raises an exception' do
+          before do
+            expect(@worker).to receive(:enumerate_tasks){ raise "Test Error" }
+            expect(Distribot).to receive(:subscribe).with(@class_ref.enumeration_queue) do |&block|
+              @callback = block
+            end
+          end
+          it 'logs the error and re-raises the exception' do
+            @worker.prepare_for_enumeration
+            expect{@callback.call({})}.to raise_error StandardError
+          end
+        end
       end
     end
     describe '#subscribe_to_task_queue' do
@@ -102,37 +118,75 @@ end
             @callback = block
           end
         end
-        it 'calls #process_single_task(contxt, task)' do
-          task = {some_task_thing: SecureRandom.uuid}
-          worker = @class_ref.new
-          expect(worker).to receive(:process_single_task).with(anything, task)
-          worker.subscribe_to_task_queue
-          @callback.call(task)
+        context 'and processing that task' do
+          context 'succeeds' do
+            it 'calls #process_single_task(contxt, task)' do
+              task = {some_task_thing: SecureRandom.uuid}
+              worker = @class_ref.new
+              expect(worker).to receive(:process_single_task).with(anything, task)
+              worker.subscribe_to_task_queue
+              @callback.call(task)
+            end
+          end
+          context 'raises an exception' do
+            it 'logs the error and re-raises the exception' do
+              task = {some_task_thing: SecureRandom.uuid}
+              worker = @class_ref.new
+              expect(worker).to receive(:process_single_task){ raise "Test Error" }
+              worker.subscribe_to_task_queue
+              expect{@callback.call(task)}.to raise_error StandardError
+            end
+          end
         end
       end
     end
     describe '#process_single_task(context, task)' do
-      it 'calls the worker\'s processor callback, then announces that the task has been completed' do
-        worker = @class_ref.new
-        workflow_id = 'xxx'
-        expect(Distribot::Workflow).to receive(:find).with(workflow_id) do
-          Distribot::Workflow.new(id: 'xxx', phases: [{name: 'start', is_initial: true}])
+      before do
+        @klass_ref = Kernel.const_get(@klass)
+        @worker = @klass_ref.new
+      end
+      context 'when the workflow' do
+        before do
+          @workflow = double('workflow')
+          expect(Distribot::Workflow).to receive(:find).with( 'xxx' ){ @workflow }
+          @context = OpenStruct.new(
+            workflow_id: 'xxx',
+            finished_queue: 'finished.queue',
+            phase: 'the-phase',
+          )
+          @task = { }
         end
-        task = {foo: SecureRandom.uuid}
-        context = OpenStruct.new(
-          workflow_id: workflow_id,
-          phase: 'phase1',
-          finished_queue: 'the-finished-queue'
-        )
-        expect(worker).to receive(@class_ref.processor).with(context, task)
-        expect(Distribot).to receive(:publish!).with(context.finished_queue, {
-          workflow_id: context.workflow_id,
-          phase: context.phase,
-          handler: @class_ref.to_s
-        })
-
-        # Finally:
-        worker.process_single_task(context, task)
+        context 'is canceled' do
+          before do
+            expect(@workflow).to receive(:canceled?){ true }
+          end
+          it 'raises an exception' do
+            expect{@worker.process_single_task(@context, @task)}.to raise_error Distribot::WorkflowCanceledError
+          end
+        end
+        context 'is paused' do
+          before do
+            expect(@workflow).to receive(:paused?){ true }
+            expect(@workflow).to receive(:canceled?){ false }
+          end
+          it 'raises an exception' do
+            expect{@worker.process_single_task(@context, @task)}.to raise_error Distribot::WorkflowPausedError
+          end
+        end
+        context 'is running' do
+          before do
+            expect(@workflow).to receive(:paused?){ false }
+            expect(@workflow).to receive(:canceled?){ false }
+            expect(Distribot).to receive(:publish!).with(@context.finished_queue, {
+              workflow_id: 'xxx',
+              phase: 'the-phase',
+              handler: @klass
+            })
+          end
+          it 'calls the worker\'s processor callback, then announces that the task has been completed' do
+            @worker.process_single_task(@context, @task)
+          end
+        end
       end
     end
   end

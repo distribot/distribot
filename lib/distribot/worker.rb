@@ -1,9 +1,8 @@
 
 module Distribot
+  class WorkflowCanceledError < StandardError; end
+  class WorkflowPausedError < StandardError; end
   module Worker
-
-    class WorkflowCanceledError < StandardError; end
-    class WorkflowPausedError < StandardError; end
 
     def self.included(klass)
 
