@@ -258,6 +258,61 @@ describe Distribot::Workflow do
     end
   end
 
+  describe '#pause!' do
+    context 'when running' do
+      it 'pauses'
+    end
+    context 'when already paused' do
+      it 'raises an exception'
+    end
+  end
+  describe '#paused?' do
+    context 'when paused' do
+      it 'returns true'
+    end
+    context 'when not paused' do
+      it 'returns false'
+    end
+  end
+  describe '#resume!' do
+    context 'when paused' do
+      it 'transitions back to the last phase transitioned to'
+    end
+    context 'when not paused' do
+      it 'raises an exception'
+    end
+  end
+  describe '#cancel!' do
+    context 'when running' do
+      it 'cancels the workflow'
+    end
+    context 'when not running' do
+      it 'raises an exception'
+    end
+  end
+  describe '#canceled?' do
+    context 'when canceled' do
+      it 'returns true'
+    end
+    context 'when not canceled' do
+      it 'returns false'
+    end
+  end
+  describe '#running?' do
+    context 'when paused' do
+      it 'returns false'
+    end
+    context 'when canceled' do
+      it 'returns false'
+    end
+    context 'when finished' do
+      it 'returns false'
+    end
+    context 'when neither canceled, paused nor finished' do
+      it 'returns true'
+    end
+  end
+
   describe '#stubbornly' do
     context 'when the block' do
       context 'raises an error' do
