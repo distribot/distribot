@@ -39,12 +39,36 @@ class SimpleWorker
   end
 end
 
-class HardWorker < SimpleWorker; end
-class GoodWorker < SimpleWorker; end
-class FastWorker < SimpleWorker; end
-class CheapWorker < SimpleWorker; end
-class ForeignWorker < SimpleWorker; end
-class SlowWorker < SimpleWorker; end
+class HardWorker < SimpleWorker;
+  version '1.1.0'
+  enumerate_with :enumerate
+  process_tasks_with :process
+end
+class GoodWorker < SimpleWorker;
+  version '1.0.0'
+  enumerate_with :enumerate
+  process_tasks_with :process
+end
+class FastWorker < SimpleWorker;
+  version '1.0.0'
+  enumerate_with :enumerate
+  process_tasks_with :process
+end
+class CheapWorker < SimpleWorker;
+  version '1.0.0'
+  enumerate_with :enumerate
+  process_tasks_with :process
+end
+class ForeignWorker < SimpleWorker;
+  version '1.0.0'
+  enumerate_with :enumerate
+  process_tasks_with :process
+end
+class SlowWorker < SimpleWorker;
+  version '1.0.0'
+  enumerate_with :enumerate
+  process_tasks_with :process
+end
 
 Distribot.logger.info HardWorker.new.run
 Distribot.logger.info GoodWorker.new.run
@@ -52,5 +76,7 @@ Distribot.logger.info FastWorker.new.run
 Distribot.logger.info CheapWorker.new.run
 Distribot.logger.info ForeignWorker.new.run
 Distribot.logger.info SlowWorker.new.run
+
+puts "Worker up and running!"
 
 sleep
