@@ -24,66 +24,97 @@ module Example
         {
           name: 'start',
           is_initial: true,
-          transitions_to: 'part1'
+          transitions_to: 'get-latest-stories'
         },
         {
-          name: 'part1',
+          name: 'get-latest-stories',
+          transitions_to: 'download-news',
           handlers: [
             {
-              name: 'HardWorker',
+              name: 'HackerNewsLister',
               version: '~> 1.0'
             }
-          ],
-          transitions_to: 'part2'
+          ]
         },
         {
-          name: 'part2',
-          handlers: %w(
-            GoodWorker
-            FastWorker
-          ),
-          transitions_to: 'part3'
-        },
-        {
-          name: 'part3',
-          handlers: %w(
-            CheapWorker
-            ForeignWorker
-          ),
-          transitions_to: 'part4'
-        },
-        {
-          name: 'part4',
-          handlers: %w(
-            SlowWorker
-          ),
-          transitions_to: 'finish'
-        },
-        {
-          name: 'finish',
-          is_final: true
-        }
-      ],
-      [
-        {
-          name: 'start',
-          is_initial: true,
-          transitions_to: 'searching'
-        },
-        {
-          name: 'searching',
-          handlers: %w(
-            GoodWorker
-            FastWorker
-            CheapWorker
-          ),
-          transitions_to: 'finish'
+          name: 'download-news',
+          transitions_to: 'finish',
+          handlers: [
+            {
+              name: 'ArticleDownloaderWorker',
+              version: '1.0.0'
+            }
+          ]
         },
         {
           name: 'finish',
           is_final: true
         }
       ]
+      # [
+      #   {
+      #     name: 'start',
+      #     is_initial: true,
+      #     transitions_to: 'part1'
+      #   },
+      #   {
+      #     name: 'part1',
+      #     handlers: [
+      #       {
+      #         name: 'HardWorker',
+      #         version: '~> 1.0'
+      #       }
+      #     ],
+      #     transitions_to: 'part2'
+      #   },
+      #   {
+      #     name: 'part2',
+      #     handlers: %w(
+      #       GoodWorker
+      #       FastWorker
+      #     ),
+      #     transitions_to: 'part3'
+      #   },
+      #   {
+      #     name: 'part3',
+      #     handlers: %w(
+      #       CheapWorker
+      #       ForeignWorker
+      #     ),
+      #     transitions_to: 'part4'
+      #   },
+      #   {
+      #     name: 'part4',
+      #     handlers: %w(
+      #       SlowWorker
+      #     ),
+      #     transitions_to: 'finish'
+      #   },
+      #   {
+      #     name: 'finish',
+      #     is_final: true
+      #   }
+      # ],
+      # [
+      #   {
+      #     name: 'start',
+      #     is_initial: true,
+      #     transitions_to: 'searching'
+      #   },
+      #   {
+      #     name: 'searching',
+      #     handlers: %w(
+      #       GoodWorker
+      #       FastWorker
+      #       CheapWorker
+      #     ),
+      #     transitions_to: 'finish'
+      #   },
+      #   {
+      #     name: 'finish',
+      #     is_final: true
+      #   }
+      # ]
     ]
   end
 
