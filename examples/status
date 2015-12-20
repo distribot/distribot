@@ -23,7 +23,7 @@ loop do
       if latest_phase.is_final
         puts "Workflow #{workflow.id} is finished."
       else
-        handler_counts = latest_phase.handlers.sort.map do |handler|
+        handler_counts = latest_phase.handlers.sort_by(&:name).map do |handler|
           remaining_tasks = redis.get("distribot.workflow.#{workflow.id}.#{latest_phase.name}.#{handler}.finished").to_i
           total_tasks = redis.get("distribot.workflow.#{workflow.id}.#{latest_phase.name}.#{handler}.finished.total").to_i
           percent_finished = ((total_tasks - remaining_tasks) * 1.0) / (total_tasks * 1.0) * 100

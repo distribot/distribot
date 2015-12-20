@@ -84,7 +84,7 @@ end
   * Break this project into smaller parts.
     * gem code
       * ~~should not require infrastructure to run tests~~
-      * enough infrastructure to run the code
+      * ~~enough infrastructure to run the code~~
     * small running environment which uses the gem
       * engine
       * worker

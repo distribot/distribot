@@ -88,6 +88,7 @@ module Distribot
       add_transition(
         from: current_phase, to: 'canceled', timestamp: Time.now.utc.to_f
       )
+      redis.srem 'distribot.workflows.active', self.id
     end
 
     def canceled?

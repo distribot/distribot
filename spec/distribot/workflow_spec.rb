@@ -365,6 +365,9 @@ describe Distribot::Workflow do
           from: 'start',
           to: 'canceled'
         ))
+        redis = double('redis')
+        expect(@workflow).to receive(:redis){ redis }
+        expect(redis).to receive(:srem).with('distribot.workflows.active', @workflow.id)
       end
       it 'cancels the workflow' do
         @workflow.cancel!
