@@ -3,6 +3,7 @@ module Distribot
   class NotRunningError < StandardError; end
   class NotPausedError < StandardError; end
 
+  # rubocop:disable ClassLength
   class Workflow
     attr_accessor :id, :phases, :consumer, :finished_callback_queue, :created_at
 
@@ -19,6 +20,7 @@ module Distribot
       new(attrs).save!
     end
 
+    # rubocop:disable Metrics/AbcSize
     def save!(&block)
       fail StandardError, 'Cannot re-save a workflow' if id
       self.id = SecureRandom.uuid
