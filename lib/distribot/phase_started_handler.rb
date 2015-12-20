@@ -17,7 +17,7 @@ module Distribot
       else
         handler_versions = phase.handlers.map do |handler|
           version = best_version(handler)
-          unless version
+          unless version && !version.blank?
             fail "Cannot find a good #{handler} version #{handler.version}"
           end
           {

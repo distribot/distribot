@@ -36,11 +36,13 @@ module Distribot
       end
 
       def enumeration_queue
-        "distribot.workflow.handler.#{self}.#{version}.enumerate"
+        self.version ||= '0.0.0'
+        "distribot.workflow.handler.#{self}.#{self.version}.enumerate"
       end
 
       def task_queue
-        "distribot.workflow.handler.#{self}.#{version}.tasks"
+        self.version ||= '0.0.0'
+        "distribot.workflow.handler.#{self}.#{self.version}.tasks"
       end
     end
 
