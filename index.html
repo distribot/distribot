@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Distribot : Work scheduling and distribution engine">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Distribot</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/jdrago999/distribot">View on GitHub</a>
+
+          <h1 id="project_title">Distribot</h1>
+          <h2 id="project_tagline">Work scheduling and distribution engine</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/jdrago999/distribot/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/jdrago999/distribot/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="distribot" class="anchor" href="#distribot" aria-hidden="true"><span class="octicon octicon-link"></span></a>Distribot</h1>
+
+<p><a href="https://codeclimate.com/github/jdrago999/distribot"><img src="https://codeclimate.com/github/jdrago999/distribot/badges/gpa.svg" alt="Code Climate"></a>
+<a href="https://codeclimate.com/github/jdrago999/distribot/coverage"><img src="https://codeclimate.com/github/jdrago999/distribot/badges/coverage.svg" alt="Test Coverage"></a></p>
+
+<p>Work scheduling and distribution engine.</p>
+
+<h2>
+<a id="features" class="anchor" href="#features" aria-hidden="true"><span class="octicon octicon-link"></span></a>Features</h2>
+
+<ul>
+<li>Built on RabbitMQ and Redis.</li>
+</ul>
+
+<p><img src="https://cdn2.iconfinder.com/data/icons/windows-8-metro-style/512/robot.png" alt="robot"></p>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<h3>
+<a id="in-your-gemfile" class="anchor" href="#in-your-gemfile" aria-hidden="true"><span class="octicon octicon-link"></span></a>In your Gemfile</h3>
+
+<div class="highlight highlight-source-ruby"><pre><span class="pl-k">gem</span> <span class="pl-s"><span class="pl-pds">'</span>distribot<span class="pl-pds">'</span></span>, <span class="pl-c1">git:</span> <span class="pl-s"><span class="pl-pds">'</span>git@github.com:jdrago999/distribot.git<span class="pl-pds">'</span></span></pre></div>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<div class="highlight highlight-source-ruby"><pre><span class="pl-k">require</span> <span class="pl-s"><span class="pl-pds">'</span>distribot<span class="pl-pds">'</span></span>
+
+<span class="pl-c1">Distribot</span>.configure <span class="pl-k">do </span>|<span class="pl-smi">config</span>|
+  config.redis_url <span class="pl-k">=</span> <span class="pl-c1">ENV</span>[<span class="pl-s"><span class="pl-pds">'</span>DISTRIBOT_REDIS_URL<span class="pl-pds">'</span></span>]
+  config.rabbitmq_url <span class="pl-k">=</span> <span class="pl-c1">ENV</span>[<span class="pl-s"><span class="pl-pds">'</span>DISTRIBOT_RABBITMQ_URL<span class="pl-pds">'</span></span>]
+<span class="pl-k">end</span></pre></div>
+
+<div class="highlight highlight-source-json"><pre>{
+  <span class="pl-s"><span class="pl-pds">"</span>name<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>search<span class="pl-pds">"</span></span>,
+  <span class="pl-s"><span class="pl-pds">"</span>phases<span class="pl-pds">"</span></span>: [
+    {
+      <span class="pl-s"><span class="pl-pds">"</span>name<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>pending<span class="pl-pds">"</span></span>,
+      <span class="pl-s"><span class="pl-pds">"</span>is_initial<span class="pl-pds">"</span></span>: <span class="pl-c1">true</span>,
+      <span class="pl-s"><span class="pl-pds">"</span>transitions_to<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>searching<span class="pl-pds">"</span></span>
+    },
+    {
+      <span class="pl-s"><span class="pl-pds">"</span>name<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>searching<span class="pl-pds">"</span></span>,
+      <span class="pl-s"><span class="pl-pds">"</span>transitions_to<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>fetching-pages<span class="pl-pds">"</span></span>,
+      <span class="pl-s"><span class="pl-pds">"</span>handlers<span class="pl-pds">"</span></span>: [
+        <span class="pl-s"><span class="pl-pds">"</span>GoogleSearcher<span class="pl-pds">"</span></span>,
+        <span class="pl-s"><span class="pl-pds">"</span>BingSearcher<span class="pl-pds">"</span></span>
+      ]
+    },
+    {
+      <span class="pl-s"><span class="pl-pds">"</span>name<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>fetching-pages<span class="pl-pds">"</span></span>,
+      <span class="pl-s"><span class="pl-pds">"</span>transitions_to<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>finished<span class="pl-pds">"</span></span>,
+      <span class="pl-s"><span class="pl-pds">"</span>handlers<span class="pl-pds">"</span></span>: [
+        {
+          <span class="pl-s"><span class="pl-pds">"</span>name<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>PageDownloader<span class="pl-pds">"</span></span>,
+          <span class="pl-s"><span class="pl-pds">"</span>version<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>~&gt; 1.2<span class="pl-pds">"</span></span>
+        }
+      ]
+    },
+    {
+      <span class="pl-s"><span class="pl-pds">"</span>name<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>finished<span class="pl-pds">"</span></span>,
+      <span class="pl-s"><span class="pl-pds">"</span>is_final<span class="pl-pds">"</span></span>: <span class="pl-c1">true</span>
+    }
+  ]
+}</pre></div>
+
+<h1>
+<a id="todo" class="anchor" href="#todo" aria-hidden="true"><span class="octicon octicon-link"></span></a>TODO</h1>
+
+<h3>
+<a id="features-1" class="anchor" href="#features-1" aria-hidden="true"><span class="octicon octicon-link"></span></a>Features</h3>
+
+<ul>
+<li>
+<del>Ability to control running workflows</del>
+
+<ul>
+<li><del>cancel</del></li>
+<li><del>pause</del></li>
+<li><del>resume</del></li>
+</ul>
+</li>
+<li>
+<del>Handler versioning</del>
+
+<ul>
+<li><del>semver</del></li>
+<li>
+<del>specify handler versions in workflow definitions</del>
+
+<ul>
+<li><del>similar to gemfile</del></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<h3>
+<a id="organization" class="anchor" href="#organization" aria-hidden="true"><span class="octicon octicon-link"></span></a>Organization</h3>
+
+<ul>
+<li>Break this project into smaller parts.
+
+<ul>
+<li>gem code
+
+<ul>
+<li><del>should not require infrastructure to run tests</del></li>
+<li>enough infrastructure to run the code</li>
+</ul>
+</li>
+<li>small running environment which uses the gem
+
+<ul>
+<li>engine</li>
+<li>worker</li>
+<li>controller</li>
+<li>
+<del>infra</del>
+
+<ul>
+<li><del>redis</del></li>
+<li><del>rabbitmq</del></li>
+<li><del>elasticsearch</del></li>
+<li><del>kibana</del></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>status dashboard
+
+<ul>
+<li>show running workflows</li>
+</ul>
+</li>
+</ul>
+
+<h2>
+<a id="notes" class="anchor" href="#notes" aria-hidden="true"><span class="octicon octicon-link"></span></a>Notes</h2>
+
+<p>Clear out queues:</p>
+
+<p><code>sudo rabbitmqctl list_queues | grep distribot | awk '{print $1}' | xargs -I qn rabbitmqadmin delete queue name=qn</code></p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Distribot maintained by <a href="https://github.com/jdrago999">jdrago999</a></p>
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
