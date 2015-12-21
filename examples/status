@@ -28,7 +28,7 @@ loop do
           total_tasks = redis.get("distribot.workflow.#{workflow.id}.#{latest_phase.name}.#{handler}.finished.total").to_i
           percent_finished = ((total_tasks - remaining_tasks) * 1.0) / (total_tasks * 1.0) * 100
           finished_tasks = total_tasks - remaining_tasks
-          "#{handler}:\t#{['=' * (finished_tasks > 0 ? finished_tasks : 0), '-' * (remaining_tasks > 0 ? remaining_tasks : 0)].join('')} #{remaining_tasks}/#{total_tasks} (#{percent_finished.round(2)}%)"
+          "#{handler}:\t#{['=' * (finished_tasks > 0 ? finished_tasks : 0), '-' * (remaining_tasks > 0 ? remaining_tasks : 0)].join('')} #{finished_tasks}/#{total_tasks} (#{percent_finished.round(2)}%)"
         end
         puts "Workflow #{workflow.id} (age:#{sprintf('%05.02f',total_age)} sec)\tphase:#{latest_phase.name}\t(#{time_in_phase.round(2)} seconds\t#{handler_counts.join("\t")}"
       end

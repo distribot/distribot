@@ -12,20 +12,14 @@ module Distribot
         attr_accessor :version, :enumerator, :process_tasks_with, :processor
       end
 
+      attr_reader :processor, :enumerator
+
       def enumerate_with(callback)
         @enumerator = callback
       end
 
-      def enumerator
-        @enumerator
-      end
-
       def process_tasks_with(callback)
         @processor = callback
-      end
-
-      def processor
-        @processor
       end
 
       # Does both setting/getting:
@@ -60,9 +54,16 @@ module Distribot
 
     def prepare_for_enumeration
       logger.tagged("handler:#{self.class}") do
-        Distribot.subscribe(self.class.enumeration_queue) do |message|
-          logger.tagged(message.map { |k, v| [k, v].join(':') }) do
-            enumerate_tasks(message)
+        pool = Concurrent::FixedThreadPool.new(5)
+        Distribot.subscribe(self.class.enumeration_queue, solo: true) do |message|
+          pool.post do
+            logger.tagged(message.map { |k, v| [k, v].join(':') }) do
+              context = OpenStruct.new(message)
+              trycatch do
+                tasks = enumerate_tasks(message)
+                announce_tasks(context, message, tasks)
+              end
+            end
           end
         end
       end
@@ -70,11 +71,14 @@ module Distribot
 
     def subscribe_to_task_queue
       logger.tagged("handler:#{self.class}") do
-        subscribe_args = { reenqueue_on_failure: true }
+        subscribe_args = { reenqueue_on_failure: true, solo: true }
+        pool = Concurrent::FixedThreadPool.new(500)
         Distribot.subscribe(self.class.task_queue, subscribe_args) do |task|
-          logger_tags = task.map { |k, v| [k, v].join(':') }
-          logger.tagged(logger_tags) do
-            handle_task_execution(task)
+          pool.post do
+            logger_tags = task.map { |k, v| [k, v].join(':') }
+            logger.tagged(logger_tags) do
+              handle_task_execution(task)
+            end
           end
         end
       end
@@ -95,6 +99,8 @@ module Distribot
       inspect_task!(context)
       # Your code is called right here:
       send(self.class.processor, context, task)
+      task_counter_key = "distribot.workflow.#{context.workflow_id}.#{context.phase}.#{self.class}.finished"
+      Distribot.redis.decr(task_counter_key)
       publish_args = {
         workflow_id: context.workflow_id,
         phase: context.phase,
@@ -108,9 +114,7 @@ module Distribot
         context = OpenStruct.new(message)
         workflow = Distribot::Workflow.find(context.workflow_id)
         fail WorkflowCanceledError if workflow.canceled?
-        send(self.class.enumerator, context) do |tasks|
-          announce_tasks(context, message, tasks)
-        end
+        send(self.class.enumerator, context)
       end
     end
 
@@ -137,6 +141,7 @@ module Distribot
       block.call
     rescue StandardError => e
       logger.error "ERROR: #{e} --- #{e.backtrace.join("\n")}"
+      warn "ERROR: #{e} --- #{e.backtrace.join("\n")}"
       raise e
     end
   end

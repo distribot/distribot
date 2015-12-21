@@ -16,6 +16,7 @@ require 'distribot/workflow_finished_handler'
 require 'distribot/connector'
 require 'syslog/logger'
 require 'logstash-logger'
+require 'concurrent'
 
 module Distribot
   class << self

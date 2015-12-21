@@ -56,7 +56,7 @@ module Distribot
   class Subscription < ConnectionSharer
     attr_accessor :queue
     def start(topic, options = {}, &block)
-      self.queue = channel.queue(topic, auto_delete: true, durable: true)
+      self.queue = channel.queue(topic, auto_delete: false, durable: true)
       subscribe_args = options.merge(manual_ack: true)
       queue.subscribe(subscribe_args) do |delivery_info, _properties, payload|
         begin
@@ -104,6 +104,10 @@ module Distribot
     end
 
     def subscribe(topic, options = {}, &block)
+      if options[:solo]
+        options.delete :solo
+        setup
+      end
       subscriber = Subscription.new(bunny)
       subscribers << subscriber.start(topic, options) do |message|
         logger.debug "received(#{topic} -> #{message})"
@@ -121,7 +125,7 @@ module Distribot
 
     def publish(topic, message)
       queue = stubbornly :get_queue do
-        channel.queue(topic, auto_delete: true, durable: true)
+        channel.queue(topic, auto_delete: false, durable: true)
       end
       logger.debug "publish(#{topic} -> #{message})"
       channel.default_exchange.publish message.to_json, routing_key: queue.name

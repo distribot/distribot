@@ -70,60 +70,65 @@ class SlowWorker < SimpleWorker;
   process_tasks_with :process
 end
 
-class HackerNewsLister
-  include Distribot::Worker
-  version '1.0.1'
-  enumerate_with :enumerate
-  process_tasks_with :process
-  def enumerate(context, &callback)
-    story_ids = JSON.parse(`curl --silent https://hacker-news.firebaseio.com/v0/newstories.json`).sample(10)
-    callback.call( story_ids.map { |id| {story_id: id} } )
-  end
-  def process(context, task)
-    json = `curl --silent -m 5 https://hacker-news.firebaseio.com/v0/item/#{task[:story_id]}.json`
-    data_key = "workflow.#{context.workflow_id}.stories"
-    parsed = JSON.parse(json, symbolize_names: true) rescue { }
-pp url: parsed[:url]
-    if parsed.key? :url
-      Distribot.redis.multi do |redis|
-        place = [data_key, SecureRandom.uuid].join(':')
-        redis.set place, json
-        redis.sadd data_key, place
-pp place => json
+module News
+  class ArticleLister
+    include Distribot::Worker
+    version '1.0.1'
+    enumerate_with :enumerate
+    process_tasks_with :process
+    def enumerate(context, &callback)
+      @enumerations ||= 0
+      story_ids = (1..20).to_a
+      tasks = story_ids.map { |id| {story_id: "#{@enumerations}.#{id}"} }
+      @enumerations += 1
+      return tasks
+    end
+    def process(context, task)
+      json = { url: "https://infra/?story_id=#{task[:story_id]}" }.to_json
+      data_key = "workflow.#{context.workflow_id}.stories"
+      parsed = JSON.parse(json, symbolize_names: true) rescue {}
+      if parsed.key? :url
+        Distribot.redis.multi do |redis|
+          place = [data_key, task[:story_id]].join(':')
+          redis.set place, json
+          redis.sadd data_key, place
+        end
       end
+    end
+  end
+
+  class ArticleDownloaderWorker
+    include Distribot::Worker
+    require 'wrest'
+    version '1.0.0'
+    enumerate_with :enumerate
+    process_tasks_with :process
+
+    def enumerate(context)
+      data_key = "workflow.#{context.workflow_id}.stories"
+      tasks = Distribot.redis.smembers(data_key).map { |location| {data_locator: location} }
+      Distribot.redis.del data_key
+      return tasks
+    end
+
+    def process(context, task)
+      data = JSON.parse(Distribot.redis.get(task[:data_locator]), symbolize_names: true)
+puts data
+#      data[:url].to_uri(verify_mode: OpenSSL::SSL::VERIFY_NONE).get
+      Distribot.redis.del(task[:data_locator])
     end
   end
 end
 
-class ArticleDownloaderWorker
-  include Distribot::Worker
-  version '1.0.0'
-  enumerate_with :enumerate
-  process_tasks_with :process
+puts News::ArticleLister.new.run
+puts News::ArticleDownloaderWorker.new.run
 
-  def enumerate(context, &callback)
-    data_key = "workflow.#{context.workflow_id}.stories"
-    callback.call( Distribot.redis.smembers(data_key).map { |location| {data_locator: location} } )
-    Distribot.redis.del data_key
-  end
-
-  def process(context, task)
-    pp self => task
-    data = JSON.parse(Distribot.redis.get( task[:data_locator] ), symbolize_names: true)
-pp data
-    article = `curl --silent "#{data[:url]}"`.chomp
-  end
-end
-
-puts HackerNewsLister.new.run
-puts ArticleDownloaderWorker.new.run
-
-Distribot.logger.info HardWorker.new.run
-Distribot.logger.info GoodWorker.new.run
-Distribot.logger.info FastWorker.new.run
-Distribot.logger.info CheapWorker.new.run
-Distribot.logger.info ForeignWorker.new.run
-Distribot.logger.info SlowWorker.new.run
+# Distribot.logger.info HardWorker.new.run
+# Distribot.logger.info GoodWorker.new.run
+# Distribot.logger.info FastWorker.new.run
+# Distribot.logger.info CheapWorker.new.run
+# Distribot.logger.info ForeignWorker.new.run
+# Distribot.logger.info SlowWorker.new.run
 
 puts "Worker up and running!"
 

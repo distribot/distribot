@@ -36,9 +36,6 @@ describe Distribot::TaskFinishedHandler do
           end
         end
         it 'does nothing, because the handler is not yet finished' do
-          # Define what 'does nothing' means:
-          expect(@redis).not_to receive(:decr)
-
           # Finally, action:
           handler = Distribot::TaskFinishedHandler.new
           handler.callback(@message)
@@ -47,15 +44,14 @@ describe Distribot::TaskFinishedHandler do
       context 'is not nil' do
         before do
           @redis = double('redis')
-          expect(@redis).to receive(:get){ 1 }
           expect(Distribot).to receive(:redis).at_least(1).times do
             @redis
           end
         end
         context 'when the task count after decrementing' do
-          context 'is <= 0' do
+          context 'is == 0' do
             before do
-              expect(@redis).to receive(:decr).ordered{ 0 }
+              expect(@redis).to receive(:get){ 0 }
               expect(@redis).to receive(:del).ordered
             end
             it 'publishes a message to the handler finished queue' do
@@ -64,18 +60,6 @@ describe Distribot::TaskFinishedHandler do
               expect(Distribot).to receive(:publish!).with("distribot.workflow.handler.finished", @message.except(:finished_queue))
 
               # Finally, action:
-              handler.callback(@message)
-            end
-          end
-          context 'is > 0' do
-            before do
-              expect(@redis).to receive(:decr){ 1 }
-            end
-            it 'does nothing after redis.decr, because the handler is not yet finished' do
-              expect(Distribot).not_to receive(:publish!)
-
-              # Finally, action:
-              handler = Distribot::TaskFinishedHandler.new
               handler.callback(@message)
             end
           end

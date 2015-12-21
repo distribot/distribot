@@ -4,6 +4,7 @@ PATH
     distribot (0.1.0)
       activesupport
       bunny
+      concurrent-ruby
       dotenv
       eye
       logstash-logger
@@ -52,6 +53,7 @@ GEM
       timers (>= 4.1.1)
     codeclimate-test-reporter (0.4.8)
       simplecov (>= 0.7.1, < 1.0.0)
+    concurrent-ruby (1.0.0)
     crack (0.4.2)
       safe_yaml (~> 1.0.0)
     diff-lcs (1.2.5)

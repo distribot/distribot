@@ -23,9 +23,6 @@ describe Distribot::WorkflowCreatedHandler do
         expect(workflow).to receive(:transition_to!).with('phase2'){ true }
         workflow
       end
-      redis = double('redis')
-      expect(redis).to receive(:incr).with('distribot.workflows.running')
-      expect(Distribot).to receive(:redis){ redis }
       expect(Distribot).to receive(:subscribe)
     end
     it 'transitions to the next phase' do

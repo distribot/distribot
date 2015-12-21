@@ -31,7 +31,7 @@ module Example
           transitions_to: 'download-news',
           handlers: [
             {
-              name: 'HackerNewsLister',
+              name: 'News::ArticleLister',
               version: '~> 1.0'
             }
           ]
@@ -41,7 +41,7 @@ module Example
           transitions_to: 'finish',
           handlers: [
             {
-              name: 'ArticleDownloaderWorker',
+              name: 'News::ArticleDownloaderWorker',
               version: '1.0.0'
             }
           ]

@@ -84,11 +84,24 @@ describe Distribot::BunnyConnector do
         block.call( id: 'hello' )
       end
     end
-    it 'subscribes to the topic, and calls the block when a message is received' do
-      @connector.subscribe(@topic) do |msg|
-        @id = msg[:id]
+    context 'when options[:solo]' do
+      context 'is truthy' do
+        it 'first calls setup, then subscribes to the topic, and calls the block when a message is received' do
+          expect(@connector).to receive(:setup)
+          @connector.subscribe(@topic, solo: true) do |msg|
+            @id = msg[:id]
+          end
+          expect(@id).to eq 'hello'
+        end
       end
-      expect(@id).to eq 'hello'
+      context 'is falsey' do
+        it 'subscribes to the topic, and calls the block when a message is received' do
+          @connector.subscribe(@topic) do |msg|
+            @id = msg[:id]
+          end
+          expect(@id).to eq 'hello'
+        end
+      end
     end
   end
 
@@ -115,7 +128,7 @@ describe Distribot::BunnyConnector do
       expect_any_instance_of(described_class).to receive(:setup)
       @connector = described_class.new
       @channel = double('channel')
-      expect(@channel).to receive(:queue).with(@topic, auto_delete: true, durable: true) do
+      expect(@channel).to receive(:queue).with(@topic, auto_delete: false, durable: true) do
         queue = double('queue')
         expect(queue).to receive(:name){ @topic }
         queue
