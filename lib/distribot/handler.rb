@@ -28,23 +28,12 @@ module Distribot
       class << self
         attr_accessor :queue, :handler, :subscribe_args
       end
+      attr_reader :handler, :queue, :subscribe_args
 
       def subscribe_to(queue_name, handler_args)
         @queue = queue_name
         @handler = handler_args.delete :handler
         @subscribe_args = handler_args
-      end
-
-      def handler
-        @handler
-      end
-
-      def queue
-        @queue
-      end
-
-      def subscribe_args
-        @subscribe_args
       end
     end
   end

@@ -48,7 +48,8 @@ describe Distribot::Workflow do
           redis = double('redis')
           expect(redis).to receive(:set).with('distribot-workflow:xxx:definition', anything)
           expect(redis).to receive(:sadd).with('distribot.workflows.active', 'xxx')
-          expect(@workflow).to receive(:redis).exactly(2).times{ redis }
+          expect(redis).to receive(:incr).with('distribot.workflows.running')
+          expect(@workflow).to receive(:redis).exactly(3).times{ redis }
 
           # Transition-making:
           expect(@workflow).to receive(:current_phase){ 'start' }
@@ -65,6 +66,7 @@ describe Distribot::Workflow do
               block.call
             end
             expect(@workflow).to receive(:finished?).ordered{false}
+            expect(@workflow).to receive(:canceled?).ordered{false}
             expect(@workflow).to receive(:finished?).ordered{true}
           end
           it 'waits until finished, then calls the callback with {workflow_id: self.id}' do
@@ -366,8 +368,9 @@ describe Distribot::Workflow do
           to: 'canceled'
         ))
         redis = double('redis')
-        expect(@workflow).to receive(:redis){ redis }
+        expect(@workflow).to receive(:redis).exactly(2).times{ redis }
         expect(redis).to receive(:srem).with('distribot.workflows.active', @workflow.id)
+        expect(redis).to receive(:decr).with('distribot.workflows.running')
       end
       it 'cancels the workflow' do
         @workflow.cancel!

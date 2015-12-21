@@ -31,4 +31,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'logstash-logger'
   spec.add_dependency 'wrest'
   spec.add_dependency 'semantic'
+  spec.add_dependency 'concurrent-ruby'
 end

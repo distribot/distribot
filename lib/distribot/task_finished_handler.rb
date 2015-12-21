@@ -7,8 +7,7 @@ module Distribot
     def callback(message)
       task_counter_key = task_counter(message)
       current_value = Distribot.redis.get(task_counter_key) || return
-      return unless current_value.to_i > 0
-      Distribot.redis.decr(task_counter_key).to_i == 0 || return
+      return unless current_value.to_i == 0
       Distribot.redis.del(task_counter_key)
       announce_handler_has_finished(message)
     end

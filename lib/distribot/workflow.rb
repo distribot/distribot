@@ -35,6 +35,7 @@ module Distribot
 
       # Add our id to the list of active workflows:
       redis.sadd 'distribot.workflows.active', id
+      redis.incr('distribot.workflows.running')
 
       # Announce our arrival to the rest of the system:
       Distribot.publish! 'distribot.workflow.created', workflow_id: id
@@ -88,7 +89,8 @@ module Distribot
       add_transition(
         from: current_phase, to: 'canceled', timestamp: Time.now.utc.to_f
       )
-      redis.srem 'distribot.workflows.active', self.id
+      redis.decr 'distribot.workflows.running'
+      redis.srem 'distribot.workflows.active', id
     end
 
     def canceled?
@@ -159,7 +161,7 @@ module Distribot
       Thread.new do
         loop do
           sleep 1
-          if finished?
+          if finished? || canceled?
             block.call(workflow_id: id)
             break
           end
