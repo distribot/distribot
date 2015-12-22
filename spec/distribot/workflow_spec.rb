@@ -11,6 +11,42 @@ describe Distribot::Workflow do
     expect(workflow.phases.count).to eq @json[:phases].count
   end
 
+  describe '.active' do
+    context 'when there are' do
+      context 'no active workflows' do
+        before do
+          redis = double('redis')
+          expect(redis).to receive(:smembers).with('distribot.workflows.active'){ [] }
+          expect(Distribot::Workflow).to receive(:redis){ redis }
+        end
+        it 'returns an empty list' do
+          expect(Distribot::Workflow.active).to eq []
+        end
+      end
+      context 'some active workflows' do
+        before do
+          @workflow_ids = ['foo', 'bar']
+          redis = double('redis')
+          expect(redis).to receive(:smembers).with('distribot.workflows.active'){ @workflow_ids }
+          @workflow_ids.each do |id|
+            expect(redis).to receive(:get).with("distribot-workflow:#{id}:definition") do
+              {
+                id: id,
+                phases: [ ]
+              }.to_json
+            end
+          end
+          expect(Distribot::Workflow).to receive(:redis).exactly(3).times{ redis }
+        end
+        it 'returns them' do
+          workflows = Distribot::Workflow.active
+          expect(workflows).to be_an Array
+          expect(workflows.map(&:id)).to eq @workflow_ids
+        end
+      end
+    end
+  end
+
   describe '#redis_id' do
     before do
       @workflow = Distribot::Workflow.new(

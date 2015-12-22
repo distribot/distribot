@@ -16,6 +16,12 @@ module Distribot
       end
     end
 
+    def self.active
+      redis.smembers('distribot.workflows.active').map do |id|
+        self.find(id)
+      end
+    end
+
     def self.create!(attrs = {})
       new(attrs).save!
     end
