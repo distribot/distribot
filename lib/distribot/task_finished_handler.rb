@@ -2,7 +2,7 @@
 module Distribot
   class TaskFinishedHandler
     include Distribot::Handler
-    subscribe_to 'distribot.workflow.task.finished', handler: :callback
+    subscribe_to 'distribot.flow.task.finished', handler: :callback
 
     def callback(message)
       task_counter_key = task_counter(message)
@@ -14,8 +14,8 @@ module Distribot
 
     def announce_handler_has_finished(message)
       Distribot.publish!(
-        'distribot.workflow.handler.finished',
-        workflow_id: message[:workflow_id],
+        'distribot.flow.handler.finished',
+        flow_id: message[:flow_id],
         phase: message[:phase],
         handler: message[:handler],
         task_queue: message[:task_queue]
@@ -23,11 +23,11 @@ module Distribot
     end
 
     def task_counter(message)
-      # i.e. - distribot.workflow.workflowId.phaseName.handlerName.finished
+      # i.e. - distribot.flow.flowId.phaseName.handlerName.finished
       [
         'distribot',
-        'workflow',
-        message[:workflow_id],
+        'flow',
+        message[:flow_id],
         message[:phase],
         message[:handler].to_s,
         'finished'

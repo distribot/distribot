@@ -85,7 +85,7 @@ module News
     end
     def process(context, task)
       json = { url: "https://infra/?story_id=#{task[:story_id]}" }.to_json
-      data_key = "workflow.#{context.workflow_id}.stories"
+      data_key = "flow.#{context.flow_id}.stories"
       parsed = JSON.parse(json, symbolize_names: true) rescue {}
       if parsed.key? :url
         Distribot.redis.multi do |redis|
@@ -105,7 +105,7 @@ module News
     process_tasks_with :process
 
     def enumerate(context)
-      data_key = "workflow.#{context.workflow_id}.stories"
+      data_key = "flow.#{context.flow_id}.stories"
       tasks = Distribot.redis.smembers(data_key).map { |location| {data_locator: location} }
       Distribot.redis.del data_key
       return tasks

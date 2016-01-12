@@ -70,13 +70,13 @@ end
 
 ### Features
 
-  * ~~Ability to control running workflows~~
+  * ~~Ability to control running flows~~
     * ~~cancel~~
     * ~~pause~~
     * ~~resume~~
   * ~~Handler versioning~~
     * ~~semver~~
-    * ~~specify handler versions in workflow definitions~~
+    * ~~specify handler versions in flow definitions~~
       * ~~similar to gemfile~~
 
 ### Organization
@@ -95,7 +95,7 @@ end
         * ~~elasticsearch~~
         * ~~kibana~~
   * status dashboard
-    * show running workflows
+    * show running flows
 
 
 ## Notes

@@ -1,6 +1,0 @@
-#!/usr/bin/env ruby
-
-require 'distribot'
-
-Distribot.logger.info Distribot::WorkflowCreatedHandler.new
-sleep

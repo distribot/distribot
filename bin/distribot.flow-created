@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require 'distribot'
+
+Distribot.logger.info Distribot::FlowCreatedHandler.new
+sleep

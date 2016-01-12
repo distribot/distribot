@@ -1,47 +1,47 @@
 require 'spec_helper'
 
-describe Distribot::Workflow do
+describe Distribot::Flow do
   before do
-    @json = JSON.parse( File.read('spec/fixtures/simple_workflow.json'), symbolize_names: true )
+    @json = JSON.parse( File.read('spec/fixtures/simple_flow.json'), symbolize_names: true )
   end
   it 'can be initialized' do
-    workflow = Distribot::Workflow.new(
+    flow = Distribot::Flow.new(
       phases: @json[:phases]
     )
-    expect(workflow.phases.count).to eq @json[:phases].count
+    expect(flow.phases.count).to eq @json[:phases].count
   end
 
   describe '.active' do
     context 'when there are' do
-      context 'no active workflows' do
+      context 'no active flows' do
         before do
           redis = double('redis')
-          expect(redis).to receive(:smembers).with('distribot.workflows.active'){ [] }
-          expect(Distribot::Workflow).to receive(:redis){ redis }
+          expect(redis).to receive(:smembers).with('distribot.flows.active'){ [] }
+          expect(Distribot::Flow).to receive(:redis){ redis }
         end
         it 'returns an empty list' do
-          expect(Distribot::Workflow.active).to eq []
+          expect(Distribot::Flow.active).to eq []
         end
       end
-      context 'some active workflows' do
+      context 'some active flows' do
         before do
-          @workflow_ids = ['foo', 'bar']
+          @flow_ids = ['foo', 'bar']
           redis = double('redis')
-          expect(redis).to receive(:smembers).with('distribot.workflows.active'){ @workflow_ids }
-          @workflow_ids.each do |id|
-            expect(redis).to receive(:get).with("distribot-workflow:#{id}:definition") do
+          expect(redis).to receive(:smembers).with('distribot.flows.active'){ @flow_ids }
+          @flow_ids.each do |id|
+            expect(redis).to receive(:get).with("distribot-flow:#{id}:definition") do
               {
                 id: id,
                 phases: [ ]
               }.to_json
             end
           end
-          expect(Distribot::Workflow).to receive(:redis).exactly(3).times{ redis }
+          expect(Distribot::Flow).to receive(:redis).exactly(3).times{ redis }
         end
         it 'returns them' do
-          workflows = Distribot::Workflow.active
-          expect(workflows).to be_an Array
-          expect(workflows.map(&:id)).to eq @workflow_ids
+          flows = Distribot::Flow.active
+          expect(flows).to be_an Array
+          expect(flows.map(&:id)).to eq @flow_ids
         end
       end
     end
@@ -49,29 +49,29 @@ describe Distribot::Workflow do
 
   describe '#redis_id' do
     before do
-      @workflow = Distribot::Workflow.new(
+      @flow = Distribot::Flow.new(
         id: 'fake-id'
       )
     end
     it 'returns the redis id' do
-      expect(@workflow.redis_id).to eq 'distribot-workflow:' + 'fake-id'
+      expect(@flow.redis_id).to eq 'distribot-flow:' + 'fake-id'
     end
   end
 
   describe '#save!' do
     before do
-      @workflow = Distribot::Workflow.new(
+      @flow = Distribot::Flow.new(
         phases: @json[:phases]
       )
     end
     context 'when saving' do
       context 'fails' do
-        context 'because the workflow already has an id' do
+        context 'because the flow already has an id' do
           before do
-            @workflow.id = 'some-id'
+            @flow.id = 'some-id'
           end
           it 'raises an error' do
-            expect{@workflow.save!}.to raise_error StandardError
+            expect{@flow.save!}.to raise_error StandardError
           end
         end
       end
@@ -82,18 +82,18 @@ describe Distribot::Workflow do
 
           # Redis-saving:
           redis = double('redis')
-          expect(redis).to receive(:set).with('distribot-workflow:xxx:definition', anything)
-          expect(redis).to receive(:sadd).with('distribot.workflows.active', 'xxx')
-          expect(redis).to receive(:incr).with('distribot.workflows.running')
-          expect(@workflow).to receive(:redis).exactly(3).times{ redis }
+          expect(redis).to receive(:set).with('distribot-flow:xxx:definition', anything)
+          expect(redis).to receive(:sadd).with('distribot.flows.active', 'xxx')
+          expect(redis).to receive(:incr).with('distribot.flows.running')
+          expect(@flow).to receive(:redis).exactly(3).times{ redis }
 
           # Transition-making:
-          expect(@workflow).to receive(:current_phase){ 'start' }
-          expect(@workflow).to receive(:add_transition).with(hash_including(to: 'start'))
+          expect(@flow).to receive(:current_phase){ 'start' }
+          expect(@flow).to receive(:add_transition).with(hash_including(to: 'start'))
 
           # Announcement-publishing:
-          expect(Distribot).to receive(:publish!).with('distribot.workflow.created', {
-            workflow_id: 'xxx'
+          expect(Distribot).to receive(:publish!).with('distribot.flow.created', {
+            flow_id: 'xxx'
           })
         end
         context 'when a callback is provided' do
@@ -101,21 +101,21 @@ describe Distribot::Workflow do
             expect(Thread).to receive(:new) do |&block|
               block.call
             end
-            expect(@workflow).to receive(:finished?).ordered{false}
-            expect(@workflow).to receive(:canceled?).ordered{false}
-            expect(@workflow).to receive(:finished?).ordered{true}
+            expect(@flow).to receive(:finished?).ordered{false}
+            expect(@flow).to receive(:canceled?).ordered{false}
+            expect(@flow).to receive(:finished?).ordered{true}
           end
-          it 'waits until finished, then calls the callback with {workflow_id: self.id}' do
+          it 'waits until finished, then calls the callback with {flow_id: self.id}' do
             @callback_args = nil
-            @workflow.save! do |info|
+            @flow.save! do |info|
               @callback_args = info
             end
-            expect(@callback_args).to eq(workflow_id: 'xxx')
+            expect(@callback_args).to eq(flow_id: 'xxx')
           end
         end
         context 'when no callback is provided' do
           it 'saves it in redis' do
-            @workflow.save!
+            @flow.save!
           end
         end
       end
@@ -124,10 +124,10 @@ describe Distribot::Workflow do
 
   describe '.create!' do
     before do
-      expect_any_instance_of(Distribot::Workflow).to receive(:save!)
+      expect_any_instance_of(Distribot::Flow).to receive(:save!)
     end
     it 'saves the object' do
-      workflow = Distribot::Workflow.create!(phases: [ ])
+      flow = Distribot::Flow.create!(phases: [ ])
     end
   end
 
@@ -144,7 +144,7 @@ describe Distribot::Workflow do
       before do
         @stored_json = @json.to_json
       end
-      it 'returns the correct workflow' do
+      it 'returns the correct flow' do
         expect(described_class.find('any-id')).to be_a described_class
       end
     end
@@ -160,7 +160,7 @@ describe Distribot::Workflow do
 
   describe '#phase(name)' do
     before do
-      @workflow = Distribot::Workflow.new(
+      @flow = Distribot::Flow.new(
         id: 'xxx',
         phases: [{is_initial: true, name: 'testy'} ]
       )
@@ -168,21 +168,21 @@ describe Distribot::Workflow do
     context 'when the phase' do
       context 'exists' do
         it 'returns the phase object' do
-          expect(@workflow.phase('testy')).to be_a Distribot::Phase
+          expect(@flow.phase('testy')).to be_a Distribot::Phase
         end
       end
       context 'does not exist' do
         it 'returns nil' do
-          expect(@workflow.phase('missing-phase')).to be_nil
+          expect(@flow.phase('missing-phase')).to be_nil
         end
       end
     end
   end
 
   describe '#transition_to!(:phase_name)' do
-    context 'when the workflow' do
+    context 'when the flow' do
       before do
-        @workflow = Distribot::Workflow.new(
+        @flow = Distribot::Flow.new(
           id: 'xxx',
           phases: [
             {is_initial: true, name: 'start'},
@@ -193,33 +193,33 @@ describe Distribot::Workflow do
       context 'did not have a previous phase' do
         before do
           @next_phase = 'start'
-          expect(@workflow).to receive(:transitions){ [ ] }
-          expect(Distribot).to receive(:publish!).with('distribot.workflow.phase.started', {
-            workflow_id: @workflow.id,
+          expect(@flow).to receive(:transitions){ [ ] }
+          expect(Distribot).to receive(:publish!).with('distribot.flow.phase.started', {
+            flow_id: @flow.id,
             phase: @next_phase
           })
         end
         it 'stores a transition from nil to the new phase' do
-          expect(@workflow).to receive(:add_transition).with(hash_including(from: nil, to: @next_phase))
-          @workflow.transition_to!(@next_phase)
+          expect(@flow).to receive(:add_transition).with(hash_including(from: nil, to: @next_phase))
+          @flow.transition_to!(@next_phase)
         end
       end
       context 'had a previous phase' do
         before do
           @next_phase = 'finish'
-          expect(@workflow).to receive(:transitions) do
+          expect(@flow).to receive(:transitions) do
             [
               {from: nil, to: 'start'}
             ]
           end
-          expect(Distribot).to receive(:publish!).with('distribot.workflow.phase.started', {
-            workflow_id: @workflow.id,
+          expect(Distribot).to receive(:publish!).with('distribot.flow.phase.started', {
+            flow_id: @flow.id,
             phase: @next_phase
           })
         end
         it 'stores a transition from the previous phase to the new phase' do
-          expect(@workflow).to receive(:add_transition).with(hash_including(from: 'start', to: @next_phase))
-          @workflow.transition_to!(@next_phase)
+          expect(@flow).to receive(:add_transition).with(hash_including(from: 'start', to: @next_phase))
+          @flow.transition_to!(@next_phase)
         end
       end
     end
@@ -227,7 +227,7 @@ describe Distribot::Workflow do
 
   describe '#current_phase' do
     before do
-      @workflow = Distribot::Workflow.new(
+      @flow = Distribot::Flow.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -235,10 +235,10 @@ describe Distribot::Workflow do
         ]
       )
     end
-    context 'when the workflow' do
+    context 'when the flow' do
       context 'has previous transitions' do
         before do
-          expect(@workflow).to receive(:transitions) do
+          expect(@flow).to receive(:transitions) do
             [
               OpenStruct.new(from: nil,     to: 'start',  timestamp: 60.seconds.ago.to_i ),
               OpenStruct.new(from: 'start', to: 'finish', timestamp: 30.seconds.ago.to_i )
@@ -246,15 +246,15 @@ describe Distribot::Workflow do
           end
         end
         it 'returns the "to" value of the latest transition' do
-          expect(@workflow.current_phase).to eq 'finish'
+          expect(@flow.current_phase).to eq 'finish'
         end
       end
       context 'has no previous transitions' do
         before do
-          expect(@workflow).to receive(:transitions){ [ ] }
+          expect(@flow).to receive(:transitions){ [ ] }
         end
         it 'returns the first is_initial:true phase name' do
-          expect(@workflow.current_phase).to eq 'start'
+          expect(@flow.current_phase).to eq 'start'
         end
       end
     end
@@ -262,7 +262,7 @@ describe Distribot::Workflow do
 
   describe '#next_phase' do
     before do
-      @workflow = Distribot::Workflow.new(
+      @flow = Distribot::Flow.new(
         id: 'xxx',
         phases: [
           {name: 'step1', is_initial: true, transitions_to: 'step2'},
@@ -272,25 +272,25 @@ describe Distribot::Workflow do
     end
     context 'when there is a next phase' do
       before do
-        expect(@workflow).to receive(:current_phase){ 'step1' }
+        expect(@flow).to receive(:current_phase){ 'step1' }
       end
       it 'returns the next phase name' do
-        expect(@workflow.next_phase).to eq 'step2'
+        expect(@flow.next_phase).to eq 'step2'
       end
     end
     context 'when there is no next phase' do
       before do
-        expect(@workflow).to receive(:current_phase){ 'step2' }
+        expect(@flow).to receive(:current_phase){ 'step2' }
       end
       it 'returns nil' do
-        expect(@workflow.next_phase).to be_nil
+        expect(@flow.next_phase).to be_nil
       end
     end
   end
 
   describe '#pause!' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -300,31 +300,31 @@ describe Distribot::Workflow do
     end
     context 'when running' do
       before do
-        expect(@workflow).to receive(:running?){ true }
-        expect(@workflow).to receive(:current_phase){ 'start' }
-        expect(@workflow).to receive(:add_transition).with(hash_including(
+        expect(@flow).to receive(:running?){ true }
+        expect(@flow).to receive(:current_phase){ 'start' }
+        expect(@flow).to receive(:add_transition).with(hash_including(
           from: 'start',
           to: 'paused'
         ))
       end
       it 'pauses' do
-        @workflow.pause!
+        @flow.pause!
       end
     end
     context 'when not running' do
       before do
-        expect(@workflow).to receive(:running?){ false }
-        expect(@workflow).not_to receive(:current_phase)
-        expect(@workflow).not_to receive(:add_transition)
+        expect(@flow).to receive(:running?){ false }
+        expect(@flow).not_to receive(:current_phase)
+        expect(@flow).not_to receive(:add_transition)
       end
       it 'raises an exception' do
-        expect{@workflow.pause!}.to raise_error Distribot::NotRunningError
+        expect{@flow.pause!}.to raise_error Distribot::NotRunningError
       end
     end
   end
   describe '#paused?' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -334,24 +334,24 @@ describe Distribot::Workflow do
     end
     context 'when paused' do
       before do
-        expect(@workflow).to receive(:current_phase){ 'paused' }
+        expect(@flow).to receive(:current_phase){ 'paused' }
       end
       it 'returns true' do
-        expect(@workflow.paused?).to be_truthy
+        expect(@flow.paused?).to be_truthy
       end
     end
     context 'when not paused' do
       before do
-        expect(@workflow).to receive(:current_phase){ 'start' }
+        expect(@flow).to receive(:current_phase){ 'start' }
       end
       it 'returns false' do
-        expect(@workflow.paused?).to be_falsey
+        expect(@flow.paused?).to be_falsey
       end
     end
   end
   describe '#resume!' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -361,33 +361,33 @@ describe Distribot::Workflow do
     end
     context 'when paused' do
       before do
-        expect(@workflow).to receive(:paused?){ true }
-        expect(@workflow).to receive(:transitions) do
+        expect(@flow).to receive(:paused?){ true }
+        expect(@flow).to receive(:transitions) do
           to_start = {from: nil, to: 'start', timestamp: 60.seconds.ago.to_f}
           to_paused = {from: 'start', to: 'paused', timestamp: 30.seconds.ago.to_f}
           [to_start, to_paused].map{|x| OpenStruct.new x }
         end
-        expect(@workflow).to receive(:add_transition).with(hash_including(
+        expect(@flow).to receive(:add_transition).with(hash_including(
           from: 'paused',
           to: 'start'
         ))
       end
       it 'transitions back to the last phase transitioned to' do
-        @workflow.resume!
+        @flow.resume!
       end
     end
     context 'when not paused' do
       before do
-        expect(@workflow).to receive(:paused?){ false }
+        expect(@flow).to receive(:paused?){ false }
       end
       it 'raises an exception' do
-        expect{@workflow.resume!}.to raise_error Distribot::NotPausedError
+        expect{@flow.resume!}.to raise_error Distribot::NotPausedError
       end
     end
   end
   describe '#cancel!' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -397,35 +397,35 @@ describe Distribot::Workflow do
     end
     context 'when running' do
       before do
-        expect(@workflow).to receive(:running?){ true }
-        expect(@workflow).to receive(:current_phase){ 'start' }
-        expect(@workflow).to receive(:add_transition).with(hash_including(
+        expect(@flow).to receive(:running?){ true }
+        expect(@flow).to receive(:current_phase){ 'start' }
+        expect(@flow).to receive(:add_transition).with(hash_including(
           from: 'start',
           to: 'canceled'
         ))
         redis = double('redis')
-        expect(@workflow).to receive(:redis).exactly(2).times{ redis }
-        expect(redis).to receive(:srem).with('distribot.workflows.active', @workflow.id)
-        expect(redis).to receive(:decr).with('distribot.workflows.running')
+        expect(@flow).to receive(:redis).exactly(2).times{ redis }
+        expect(redis).to receive(:srem).with('distribot.flows.active', @flow.id)
+        expect(redis).to receive(:decr).with('distribot.flows.running')
       end
-      it 'cancels the workflow' do
-        @workflow.cancel!
+      it 'cancels the flow' do
+        @flow.cancel!
       end
     end
     context 'when not running' do
       before do
-        expect(@workflow).to receive(:running?){ false }
-        expect(@workflow).not_to receive(:current_phase)
-        expect(@workflow).not_to receive(:add_transition)
+        expect(@flow).to receive(:running?){ false }
+        expect(@flow).not_to receive(:current_phase)
+        expect(@flow).not_to receive(:add_transition)
       end
       it 'raises an exception' do
-        expect{@workflow.cancel!}.to raise_error Distribot::NotRunningError
+        expect{@flow.cancel!}.to raise_error Distribot::NotRunningError
       end
     end
   end
   describe '#canceled?' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -435,24 +435,24 @@ describe Distribot::Workflow do
     end
     context 'when canceled' do
       before do
-        expect(@workflow).to receive(:current_phase){ 'canceled' }
+        expect(@flow).to receive(:current_phase){ 'canceled' }
       end
       it 'returns true' do
-        expect(@workflow.canceled?).to be_truthy
+        expect(@flow.canceled?).to be_truthy
       end
     end
     context 'when not canceled' do
       before do
-        expect(@workflow).to receive(:current_phase){ 'start' }
+        expect(@flow).to receive(:current_phase){ 'start' }
       end
       it 'returns false' do
-        expect(@workflow.canceled?).to be_falsey
+        expect(@flow.canceled?).to be_falsey
       end
     end
   end
   describe '#running?' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -462,46 +462,46 @@ describe Distribot::Workflow do
     end
     context 'when paused' do
       before do
-        expect(@workflow).to receive(:paused?){ true }
+        expect(@flow).to receive(:paused?){ true }
       end
       it 'returns false' do
-        expect(@workflow.running?).to be_falsey
+        expect(@flow.running?).to be_falsey
       end
     end
     context 'when canceled' do
       before do
-        expect(@workflow).to receive(:paused?){ false }
-        expect(@workflow).to receive(:canceled?){ true }
+        expect(@flow).to receive(:paused?){ false }
+        expect(@flow).to receive(:canceled?){ true }
       end
       it 'returns false' do
-        expect(@workflow.running?).to be_falsey
+        expect(@flow.running?).to be_falsey
       end
     end
     context 'when finished' do
       before do
-        expect(@workflow).to receive(:paused?){ false }
-        expect(@workflow).to receive(:canceled?){ false }
-        expect(@workflow).to receive(:finished?){ true }
+        expect(@flow).to receive(:paused?){ false }
+        expect(@flow).to receive(:canceled?){ false }
+        expect(@flow).to receive(:finished?){ true }
       end
       it 'returns false' do
-        expect(@workflow.running?).to be_falsey
+        expect(@flow.running?).to be_falsey
       end
     end
     context 'when neither canceled, paused nor finished' do
       before do
-        expect(@workflow).to receive(:paused?){ false }
-        expect(@workflow).to receive(:canceled?){ false }
-        expect(@workflow).to receive(:finished?){ false }
+        expect(@flow).to receive(:paused?){ false }
+        expect(@flow).to receive(:canceled?){ false }
+        expect(@flow).to receive(:finished?){ false }
       end
       it 'returns true' do
-        expect(@workflow.running?).to be_truthy
+        expect(@flow.running?).to be_truthy
       end
     end
   end
 
   describe '#finished?' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -511,10 +511,10 @@ describe Distribot::Workflow do
     end
     context 'when the latest transition is to a phase that' do
       before do
-        expect(@workflow).to receive(:transitions) do
+        expect(@flow).to receive(:transitions) do
           [OpenStruct.new( to: 'latest-phase' )]
         end
-        expect(@workflow).to receive(:phase) do
+        expect(@flow).to receive(:phase) do
           phase = double('phase')
           expect(phase).to receive(:is_final){ @is_final }
           phase
@@ -525,7 +525,7 @@ describe Distribot::Workflow do
           @is_final = true
         end
         it 'returns true' do
-          expect(@workflow.finished?).to be_truthy
+          expect(@flow.finished?).to be_truthy
         end
       end
       context 'is not final' do
@@ -533,7 +533,7 @@ describe Distribot::Workflow do
           @is_final = false
         end
         it 'returns false' do
-          expect(@workflow.finished?).to be_falsey
+          expect(@flow.finished?).to be_falsey
         end
       end
     end
@@ -541,7 +541,7 @@ describe Distribot::Workflow do
 
   describe '#add_transition(...)' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -556,17 +556,17 @@ describe Distribot::Workflow do
         timestamp: Time.now.utc.to_f
       }
       redis = double('redis')
-      expect(redis).to receive(:sadd).with(@workflow.redis_id + ":transitions", @transition_info.to_json)
-      expect(@workflow).to receive(:redis){ redis }
+      expect(redis).to receive(:sadd).with(@flow.redis_id + ":transitions", @transition_info.to_json)
+      expect(@flow).to receive(:redis){ redis }
     end
-    it 'adds a transition record for the workflow' do
-      @workflow.add_transition(@transition_info)
+    it 'adds a transition record for the flow' do
+      @flow.add_transition(@transition_info)
     end
   end
 
   describe '#transitions' do
     before do
-      @workflow = described_class.new(
+      @flow = described_class.new(
         id: 'xxx',
         phases: [
           {name: 'start', is_initial: true},
@@ -574,15 +574,15 @@ describe Distribot::Workflow do
         ]
       )
       redis = double('redis')
-      expect(redis).to receive(:smembers).with(@workflow.redis_id + ':transitions'){ @transitions }
-      expect(@workflow).to receive(:redis){ redis }
+      expect(redis).to receive(:smembers).with(@flow.redis_id + ':transitions'){ @transitions }
+      expect(@flow).to receive(:redis){ redis }
     end
     context 'when there are no transitions yet' do
       before do
         @transitions = [ ]
       end
       it 'returns an empty list' do
-        expect(@workflow.transitions).to eq [ ]
+        expect(@flow.transitions).to eq [ ]
       end
     end
     context 'when there are transitions' do
@@ -595,7 +595,7 @@ describe Distribot::Workflow do
       end
       it 'returns them sorted by timestamp' do
         original_transitions = @transitions.map{|x| JSON.parse(x, symbolize_names: true)}
-        @results = @workflow.transitions
+        @results = @flow.transitions
         expect(@results.first.timestamp).to eq original_transitions[1][:timestamp]
         expect(@results.last.timestamp).to eq original_transitions.first[:timestamp]
       end
@@ -604,7 +604,7 @@ describe Distribot::Workflow do
 
   describe '#redis' do
     it 'returns redis' do
-      expect(Distribot::Workflow).to receive(:redis){ 'redis-lol' }
+      expect(Distribot::Flow).to receive(:redis){ 'redis-lol' }
       expect(described_class.new.send(:redis)).to eq 'redis-lol'
     end
   end
@@ -621,11 +621,11 @@ describe Distribot::Workflow do
       context 'raises an error' do
         it 'keeps trying forever, until it stops raising an error' do
           @return_value = SecureRandom.uuid
-          workflow = described_class.new
+          flow = described_class.new
           @max_tries = 3
           @total_tries = 0
-          expect(workflow).to receive(:warn).exactly(3).times
-          expect(workflow.stubbornly(:foo){
+          expect(flow).to receive(:warn).exactly(3).times
+          expect(flow.stubbornly(:foo){
             if @total_tries >= @max_tries
               @return_value
             else
@@ -638,8 +638,8 @@ describe Distribot::Workflow do
       context 'does not raise an error' do
         it 'returns the result of the block' do
           @return_value = SecureRandom.uuid
-          workflow = described_class.new
-          expect(workflow.stubbornly(:foo){ @return_value }).to eq @return_value
+          flow = described_class.new
+          expect(flow.stubbornly(:foo){ @return_value }).to eq @return_value
         end
       end
     end

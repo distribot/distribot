@@ -27,11 +27,11 @@ end
     end
     it 'adds an enumeration_queue accessor' do
       @klass_ref = Kernel.const_get(@klass)
-      expect(@klass_ref.send :enumeration_queue).to eq "distribot.workflow.handler.#{@klass}.#{@klass_ref.version}.enumerate"
+      expect(@klass_ref.send :enumeration_queue).to eq "distribot.flow.handler.#{@klass}.#{@klass_ref.version}.enumerate"
     end
     it 'adds a task_queue accessor' do
       @klass_ref = Kernel.const_get(@klass)
-      expect(@klass_ref.send :task_queue).to eq "distribot.workflow.handler.#{@klass}.#{@klass_ref.version}.tasks"
+      expect(@klass_ref.send :task_queue).to eq "distribot.flow.handler.#{@klass}.#{@klass_ref.version}.tasks"
     end
   end
 
@@ -66,7 +66,7 @@ end
     describe '#prepare_for_enumeration' do
       before do
         @worker = @class_ref.new
-        @workflow = Distribot::Workflow.new(id: 'xxx', phases: [{name: 'start', is_initial: true}])
+        @flow = Distribot::Flow.new(id: 'xxx', phases: [{name: 'start', is_initial: true}])
         expect(Concurrent::FixedThreadPool).to receive(:new) do
           pool = double('pool')
           expect(pool).to receive(:post) do |&block|
@@ -79,7 +79,7 @@ end
         context 'succeeds' do
           it 'goes smoothly' do
             message = {
-              workflow_id: @workflow.id,
+              flow_id: @flow.id,
               phase: 'phase1',
               task_queue: 'task-queue',
               finished_queue: 'finished-queue',
@@ -118,37 +118,37 @@ end
         @klass_ref = Kernel.const_get(@klass)
         @worker = @klass_ref.new
       end
-      context 'when the workflow' do
+      context 'when the flow' do
         before do
-          @workflow = double('workflow')
-          expect(Distribot::Workflow).to receive(:find).with( 'xxx' ){ @workflow }
+          @flow = double('flow')
+          expect(Distribot::Flow).to receive(:find).with( 'xxx' ){ @flow }
         end
         context 'is canceled' do
           before do
-            expect(@workflow).to receive(:canceled?){ true }
+            expect(@flow).to receive(:canceled?){ true }
           end
           it 'raises an error' do
             expect(@worker).to receive(:warn)
-            expect{@worker.enumerate_tasks(workflow_id: 'xxx')}.to raise_error Distribot::WorkflowCanceledError
+            expect{@worker.enumerate_tasks(flow_id: 'xxx')}.to raise_error Distribot::FlowCanceledError
           end
         end
         context 'is not canceled' do
           before do
-            expect(@workflow).to receive(:canceled?){ false }
+            expect(@flow).to receive(:canceled?){ false }
           end
           it 'calls the task enumerator method, then accounts for the tasks it returns' do
 
             # Finally:
-            @worker.enumerate_tasks(workflow_id: 'xxx', task_counter: 'task.counter' )
+            @worker.enumerate_tasks(flow_id: 'xxx', task_counter: 'task.counter' )
           end
         end
       end
     end
     describe '#announce_tasks(context, message, tasks)' do
       before do
-        @workflow = Distribot::Workflow.new(id: 'xxx')
+        @flow = Distribot::Flow.new(id: 'xxx')
         @message = {
-          workflow_id: @workflow.id,
+          flow_id: @flow.id,
           phase: 'phase1',
           task_queue: 'task-queue',
           finished_queue: 'finished-queue',
@@ -184,7 +184,7 @@ end
           @pool
         end
       end
-      it 'subscribes to the task queue for this $workflow.$phase.$handler so it can consume them, and stores the consumer for cancelation later' do
+      it 'subscribes to the task queue for this $flow.$phase.$handler so it can consume them, and stores the consumer for cancelation later' do
         worker = @class_ref.new
         expect(Distribot).to receive(:subscribe).with(@class_ref.task_queue, reenqueue_on_failure: true, solo: true) do |&block|
           'fake-consumer'
@@ -228,12 +228,12 @@ end
         @klass_ref = Kernel.const_get(@klass)
         @worker = @klass_ref.new
       end
-      context 'when the workflow' do
+      context 'when the flow' do
         before do
-          @workflow = double('workflow')
-          expect(Distribot::Workflow).to receive(:find).with( 'xxx' ){ @workflow }
+          @flow = double('flow')
+          expect(Distribot::Flow).to receive(:find).with( 'xxx' ){ @flow }
           @context = OpenStruct.new(
-            workflow_id: 'xxx',
+            flow_id: 'xxx',
             finished_queue: 'finished.queue',
             phase: 'the-phase',
           )
@@ -241,33 +241,33 @@ end
         end
         context 'is canceled' do
           before do
-            expect(@workflow).to receive(:canceled?){ true }
+            expect(@flow).to receive(:canceled?){ true }
           end
           it 'raises an exception' do
-            expect{@worker.process_single_task(@context, @task)}.to raise_error Distribot::WorkflowCanceledError
+            expect{@worker.process_single_task(@context, @task)}.to raise_error Distribot::FlowCanceledError
           end
         end
         context 'is paused' do
           before do
-            expect(@workflow).to receive(:paused?){ true }
-            expect(@workflow).to receive(:canceled?){ false }
+            expect(@flow).to receive(:paused?){ true }
+            expect(@flow).to receive(:canceled?){ false }
           end
           it 'raises an exception' do
-            expect{@worker.process_single_task(@context, @task)}.to raise_error Distribot::WorkflowPausedError
+            expect{@worker.process_single_task(@context, @task)}.to raise_error Distribot::FlowPausedError
           end
         end
         context 'is running' do
           before do
-            expect(@workflow).to receive(:paused?){ false }
-            expect(@workflow).to receive(:canceled?){ false }
+            expect(@flow).to receive(:paused?){ false }
+            expect(@flow).to receive(:canceled?){ false }
             expect(Distribot).to receive(:publish!).with(@context.finished_queue, {
-              workflow_id: 'xxx',
+              flow_id: 'xxx',
               phase: 'the-phase',
               handler: @klass
             })
             redis = double('redis')
             expect(redis).to receive(:decr).with(
-              "distribot.workflow.#{@context.workflow_id}.#{@context.phase}.#{@klass}.finished"
+              "distribot.flow.#{@context.flow_id}.#{@context.phase}.#{@klass}.finished"
             )
             expect(Distribot).to receive(:redis){ redis }
           end
