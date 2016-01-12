@@ -2,16 +2,16 @@
 module Distribot
   class PhaseFinishedHandler
     include Distribot::Handler
-    subscribe_to 'distribot.workflow.phase.finished', handler: :callback
+    subscribe_to 'distribot.flow.phase.finished', handler: :callback
 
     def callback(message)
-      workflow = Distribot::Workflow.find(message[:workflow_id])
-      return unless workflow.current_phase == message[:phase]
-      if workflow.next_phase
-        workflow.transition_to! workflow.next_phase
+      flow = Distribot::Flow.find(message[:flow_id])
+      return unless flow.current_phase == message[:phase]
+      if flow.next_phase
+        flow.transition_to! flow.next_phase
       else
         Distribot.publish!(
-          'distribot.workflow.finished', workflow_id: workflow.id
+          'distribot.flow.finished', flow_id: flow.id
         )
       end
     end

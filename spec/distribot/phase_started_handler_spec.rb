@@ -3,7 +3,7 @@ require 'spec_helper'
 describe Distribot::PhaseStartedHandler do
   describe 'definition' do
     it 'subscribes to the correct queue' do
-      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.phase.started'
+      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.flow.phase.started'
     end
     it 'declares a valid handler' do
       expect(Distribot::Handler.handler_for(described_class)).to eq :callback
@@ -16,7 +16,7 @@ describe Distribot::PhaseStartedHandler do
 
   describe '#callback' do
     before do
-      @workflow = Distribot::Workflow.new(
+      @flow = Distribot::Flow.new(
         id: 1,
         name: 'test',
         phases: [{
@@ -24,10 +24,10 @@ describe Distribot::PhaseStartedHandler do
           is_initial: true,
         }]
       )
-      expect(Distribot::Workflow).to receive(:find).with(1){ @workflow }
+      expect(Distribot::Flow).to receive(:find).with(1){ @flow }
       @phase = double('phase')
       expect(@phase).to receive(:handlers).at_least(1).times{ @handlers }
-      expect(@workflow).to receive(:phase).with('phase1'){ @phase }
+      expect(@flow).to receive(:phase).with('phase1'){ @phase }
     end
     context 'when this phase has' do
       context 'no handlers' do
@@ -36,12 +36,12 @@ describe Distribot::PhaseStartedHandler do
           expect(@phase).to receive(:name){ 'phase1' }
         end
         it 'considers this phase finished and publishes a message to that effect' do
-          expect(Distribot).to receive(:publish!).with('distribot.workflow.phase.finished', {
-            workflow_id: @workflow.id,
+          expect(Distribot).to receive(:publish!).with('distribot.flow.phase.finished', {
+            flow_id: @flow.id,
             phase: 'phase1'
           })
           expect(Distribot).to receive(:subscribe)
-          described_class.new.callback(workflow_id: @workflow.id, phase: 'phase1')
+          described_class.new.callback(flow_id: @flow.id, phase: 'phase1')
         end
       end
       context 'some handlers' do
@@ -61,20 +61,20 @@ describe Distribot::PhaseStartedHandler do
             expect(@worker).to receive(:best_version).ordered.with(@handlers[0]){ '1.0' }
             expect(@worker).to receive(:best_version).ordered.with(@handlers[1]){ '2.0' }
             expect(@worker).to receive(:init_handler).ordered.with(
-              @workflow,
+              @flow,
               @phase,
               @handlers[0],
               '1.0'
             )
             expect(@worker).to receive(:init_handler).ordered.with(
-              @workflow,
+              @flow,
               @phase,
               @handlers[1],
               '2.0'
             )
           end
           it 'jumpstarts each handler' do
-            @worker.callback(workflow_id: @workflow.id, phase: 'phase1')
+            @worker.callback(flow_id: @flow.id, phase: 'phase1')
           end
         end
         context 'any of the handlers cannot find a suitable version' do
@@ -83,7 +83,7 @@ describe Distribot::PhaseStartedHandler do
             expect(@worker).not_to receive(:init_handler)
           end
           it 'raises an exception' do
-            expect{@worker.callback(workflow_id: @workflow.id, phase: 'phase1')}.to raise_error RuntimeError
+            expect{@worker.callback(flow_id: @flow.id, phase: 'phase1')}.to raise_error RuntimeError
           end
         end
       end
@@ -96,11 +96,11 @@ describe Distribot::PhaseStartedHandler do
         connector = double('connector')
         expect(connector).to receive(:queues) {
           %w(
-            distribot.workflow.handler.FooHandler.0.9.0.tasks
-            distribot.workflow.handler.FooHandler.1.0.0.tasks
-            distribot.workflow.handler.FooHandler.1.0.1.tasks
-            distribot.workflow.handler.FooHandler.2.0.0.tasks
-            distribot.workflow.handler.BarHandler.1.0.0.tasks
+            distribot.flow.handler.FooHandler.0.9.0.tasks
+            distribot.flow.handler.FooHandler.1.0.0.tasks
+            distribot.flow.handler.FooHandler.1.0.1.tasks
+            distribot.flow.handler.FooHandler.2.0.0.tasks
+            distribot.flow.handler.BarHandler.1.0.0.tasks
           )
         }
         connector
@@ -109,7 +109,7 @@ describe Distribot::PhaseStartedHandler do
       @worker = described_class.new
     end
     context 'when the handler version' do
-      context 'is specified in the workflow ' do
+      context 'is specified in the flow ' do
         before do
           @handler = Distribot::PhaseHandler.new(name: 'FooHandler', version: '~> 1.0')
         end
@@ -117,7 +117,7 @@ describe Distribot::PhaseStartedHandler do
           expect(@worker.best_version(@handler)).to eq '1.0.1'
         end
       end
-      context 'is not specified in the workflow' do
+      context 'is not specified in the flow' do
         before do
           @handler = Distribot::PhaseHandler.new(name: 'FooHandler')
         end
@@ -128,23 +128,23 @@ describe Distribot::PhaseStartedHandler do
     end
   end
 
-  describe '#init_handler(workflow, phase, handler, version)' do
+  describe '#init_handler(flow, phase, handler, version)' do
     before do
-      @workflow = Distribot::Workflow.new(id: 'xxx')
+      @flow = Distribot::Flow.new(id: 'xxx')
       @phase = Distribot::Phase.new(name: 'phase1')
       @handler = Distribot::PhaseHandler.new(name: 'FooHandler', version: '1.0')
       @version = '1.0'
       expect(Distribot).to receive(:subscribe)
-      expect(Distribot).to receive(:publish!).with("distribot.workflow.handler.#{@handler}.#{@version}.enumerate",
-        workflow_id: @workflow.id,
+      expect(Distribot).to receive(:publish!).with("distribot.flow.handler.#{@handler}.#{@version}.enumerate",
+        flow_id: @flow.id,
         phase: @phase.name,
         task_queue: a_string_matching(/\.#{@handler}\.#{@version}\.tasks/),
-        task_counter: a_string_matching(/\.#{@workflow.id}\.#{@phase.name}\.#{@handler}\.finished/),
-        finished_queue: 'distribot.workflow.task.finished',
+        task_counter: a_string_matching(/\.#{@flow.id}\.#{@phase.name}\.#{@handler}\.finished/),
+        finished_queue: 'distribot.flow.task.finished',
       )
     end
     it 'publishes a message for the handler with everything it needs to begin task enumeration' do
-      described_class.new.init_handler(@workflow, @phase, @handler, @version)
+      described_class.new.init_handler(@flow, @phase, @handler, @version)
     end
   end
 end

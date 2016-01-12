@@ -3,7 +3,7 @@ require 'spec_helper'
 describe Distribot::PhaseFinishedHandler do
   describe 'definition' do
     it 'subscribes to the correct queue' do
-      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.phase.finished'
+      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.flow.phase.finished'
     end
     it 'declares a valid handler' do
       expect(Distribot::Handler.handler_for(described_class)).to eq :callback
@@ -14,40 +14,40 @@ describe Distribot::PhaseFinishedHandler do
     end
   end
 
-  describe '#callback( :workflow_id, :phase )' do
+  describe '#callback( :flow_id, :phase )' do
     before do
       expect(Distribot).to receive(:subscribe)
     end
-    context 'when workflow is' do
+    context 'when flow is' do
       before do
-        @workflow = double('workflow')
-        @workflow_id = 'xxx'
-        expect(Distribot::Workflow).to receive(:find).with(@workflow_id) { @workflow }
+        @flow = double('flow')
+        @flow_id = 'xxx'
+        expect(Distribot::Flow).to receive(:find).with(@flow_id) { @flow }
       end
       context 'still in :phase' do
         before do
-          expect(@workflow).to receive(:current_phase){ 'start' }
+          expect(@flow).to receive(:current_phase){ 'start' }
         end
-        context 'and the workflow' do
+        context 'and the flow' do
           context 'has a next phase' do
             before do
-              expect(@workflow).to receive(:next_phase).exactly(2).times{ 'finish' }
+              expect(@flow).to receive(:next_phase).exactly(2).times{ 'finish' }
             end
-            it 'tells the workflow to transition to the next phase' do
-              expect(@workflow).to receive(:transition_to!).with('finish')
-              described_class.new.callback(workflow_id: @workflow_id, phase: 'start')
+            it 'tells the flow to transition to the next phase' do
+              expect(@flow).to receive(:transition_to!).with('finish')
+              described_class.new.callback(flow_id: @flow_id, phase: 'start')
             end
           end
           context 'does not have a next phase' do
             before do
-              expect(@workflow).to receive(:next_phase){ nil }
-              expect(@workflow).to receive(:id){ @workflow_id }
+              expect(@flow).to receive(:next_phase){ nil }
+              expect(@flow).to receive(:id){ @flow_id }
             end
-            it 'publishes to distribot.workflow.finished' do
-              expect(Distribot).to receive(:publish!).with('distribot.workflow.finished', {
-                workflow_id: @workflow_id
+            it 'publishes to distribot.flow.finished' do
+              expect(Distribot).to receive(:publish!).with('distribot.flow.finished', {
+                flow_id: @flow_id
               })
-              described_class.new.callback(workflow_id: @workflow_id, phase: 'start')
+              described_class.new.callback(flow_id: @flow_id, phase: 'start')
             end
           end
         end

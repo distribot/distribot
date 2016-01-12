@@ -29,24 +29,24 @@ describe Distribot::Connector do
       expect_any_instance_of(described_class).to receive(:setup)
       @connector = described_class.new
       @queues = %w(
-        distribot.workflow.created
-        distribot.workflow.finished
-        distribot.workflow.handler.CheapWorker.1.0.0.enumerate
-        distribot.workflow.handler.CheapWorker.1.0.0.tasks
-        distribot.workflow.handler.FastWorker.1.0.0.enumerate
-        distribot.workflow.handler.FastWorker.1.0.0.tasks
-        distribot.workflow.handler.ForeignWorker.1.0.0.enumerate
-        distribot.workflow.handler.ForeignWorker.1.0.0.tasks
-        distribot.workflow.handler.GoodWorker.1.0.0.enumerate
-        distribot.workflow.handler.GoodWorker.1.0.0.tasks
-        distribot.workflow.handler.HardWorker.1.0.0.enumerate
-        distribot.workflow.handler.HardWorker.1.0.0.tasks
-        distribot.workflow.handler.SlowWorker.1.0.0.enumerate
-        distribot.workflow.handler.SlowWorker.1.0.0.tasks
-        distribot.workflow.handler.finished
-        distribot.workflow.phase.finished
-        distribot.workflow.phase.started
-        distribot.workflow.task.finished
+        distribot.flow.created
+        distribot.flow.finished
+        distribot.flow.handler.CheapWorker.1.0.0.enumerate
+        distribot.flow.handler.CheapWorker.1.0.0.tasks
+        distribot.flow.handler.FastWorker.1.0.0.enumerate
+        distribot.flow.handler.FastWorker.1.0.0.tasks
+        distribot.flow.handler.ForeignWorker.1.0.0.enumerate
+        distribot.flow.handler.ForeignWorker.1.0.0.tasks
+        distribot.flow.handler.GoodWorker.1.0.0.enumerate
+        distribot.flow.handler.GoodWorker.1.0.0.tasks
+        distribot.flow.handler.HardWorker.1.0.0.enumerate
+        distribot.flow.handler.HardWorker.1.0.0.tasks
+        distribot.flow.handler.SlowWorker.1.0.0.enumerate
+        distribot.flow.handler.SlowWorker.1.0.0.tasks
+        distribot.flow.handler.finished
+        distribot.flow.phase.finished
+        distribot.flow.phase.started
+        distribot.flow.task.finished
       )
       @queues_json = @queues.to_a.map{|name| {name: name} }.to_json
       Wrest.logger = Logger.new('/dev/null')

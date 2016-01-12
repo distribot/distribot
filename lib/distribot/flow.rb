@@ -4,7 +4,7 @@ module Distribot
   class NotPausedError < StandardError; end
 
   # rubocop:disable ClassLength
-  class Workflow
+  class Flow
     attr_accessor :id, :phases, :consumer, :finished_callback_queue, :created_at
 
     def initialize(attrs = {})
@@ -17,7 +17,7 @@ module Distribot
     end
 
     def self.active
-      redis.smembers('distribot.workflows.active').map do |id|
+      redis.smembers('distribot.flows.active').map do |id|
         self.find(id)
       end
     end
@@ -28,7 +28,7 @@ module Distribot
 
     # rubocop:disable Metrics/AbcSize
     def save!(&block)
-      fail StandardError, 'Cannot re-save a workflow' if id
+      fail StandardError, 'Cannot re-save a flow' if id
       self.id = SecureRandom.uuid
       record_id = redis_id + ':definition'
       self.created_at = Time.now.to_f
@@ -39,19 +39,19 @@ module Distribot
       # Transition into the first phase:
       add_transition to: current_phase, timestamp: Time.now.utc.to_f
 
-      # Add our id to the list of active workflows:
-      redis.sadd 'distribot.workflows.active', id
-      redis.incr('distribot.workflows.running')
+      # Add our id to the list of active flows:
+      redis.sadd 'distribot.flows.active', id
+      redis.incr('distribot.flows.running')
 
       # Announce our arrival to the rest of the system:
-      Distribot.publish! 'distribot.workflow.created', workflow_id: id
+      Distribot.publish! 'distribot.flow.created', flow_id: id
 
-      wait_for_workflow_to_finish(block) if block_given?
+      wait_for_flow_to_finish(block) if block_given?
       self
     end
 
     def self.find(id)
-      redis_id = Distribot.redis_id('workflow', id)
+      redis_id = Distribot.redis_id('flow', id)
       raw_json = redis.get("#{redis_id}:definition") || return
       new(
         JSON.parse(raw_json, symbolize_names: true)
@@ -95,8 +95,8 @@ module Distribot
       add_transition(
         from: current_phase, to: 'canceled', timestamp: Time.now.utc.to_f
       )
-      redis.decr 'distribot.workflows.running'
-      redis.srem 'distribot.workflows.active', id
+      redis.decr 'distribot.flows.running'
+      redis.srem 'distribot.flows.active', id
     end
 
     def canceled?
@@ -108,7 +108,7 @@ module Distribot
     end
 
     def redis_id
-      @redis_id ||= Distribot.redis_id('workflow', id)
+      @redis_id ||= Distribot.redis_id('flow', id)
     end
 
     def transition_to!(phase)
@@ -116,8 +116,8 @@ module Distribot
       prev = previous_transition ? previous_transition[:to] : nil
       add_transition(from: prev, to: phase, timestamp: Time.now.utc.to_f)
       Distribot.publish!(
-        'distribot.workflow.phase.started',
-        workflow_id: id,
+        'distribot.flow.phase.started',
+        flow_id: id,
         phase: phase
       )
     end
@@ -163,12 +163,12 @@ module Distribot
 
     private
 
-    def wait_for_workflow_to_finish(block)
+    def wait_for_flow_to_finish(block)
       Thread.new do
         loop do
           sleep 1
           if finished? || canceled?
-            block.call(workflow_id: id)
+            block.call(flow_id: id)
             break
           end
         end

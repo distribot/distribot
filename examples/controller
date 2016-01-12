@@ -118,21 +118,21 @@ module Example
     ]
   end
 
-  def self.make_workflow(name)
+  def self.make_flow(name)
     name += "#1"
-    @workflow = Distribot::Workflow.new(
+    @flow = Distribot::Flow.new(
       name: name,
       phases: phase_groups.sample
     )
-    @workflow.save! do |info|
+    @flow.save! do |info|
       finished = Distribot.redis.incr('finished')
-      workflow = Distribot::Workflow.find(info[:workflow_id])
-      first_transition = workflow.transitions.sort_by(&:timestamp).first
-      last_transition = workflow.transitions.sort_by(&:timestamp).last
+      flow = Distribot::Flow.find(info[:flow_id])
+      first_transition = flow.transitions.sort_by(&:timestamp).first
+      last_transition = flow.transitions.sort_by(&:timestamp).last
       duration = last_transition.timestamp - first_transition.timestamp
       puts "WORKFLOW FINISHED: after #{duration} seconds -- #{info}: #{finished} total"
     end
-    @workflow
+    @flow
   end
 end
 
@@ -145,14 +145,14 @@ gets
 
 start_time = Time.now.to_f
 Distribot.redis.set('dificulty', 3)
-Distribot.redis.set('distribot.workflows.running', 0)
-Distribot.redis.set('distribot.workflows.max', max)
-Example.make_workflow "Workflow[1]"
+Distribot.redis.set('distribot.flows.running', 0)
+Distribot.redis.set('distribot.flows.max', max)
+Example.make_flow "Flow[1]"
 
 loop do
   sleep 2
-  max = Distribot.redis.get('distribot.workflows.max').to_i
-  current = Distribot.redis.get('distribot.workflows.running').to_i
+  max = Distribot.redis.get('distribot.flows.max').to_i
+  current = Distribot.redis.get('distribot.flows.running').to_i
   running_time = Time.now.to_f - start_time
   finished = Distribot.redis.get('finished').to_i
   rate = ( finished / running_time ).to_f.round(2)
@@ -161,7 +161,7 @@ loop do
   diff.times do |num|
     new_index = Distribot.redis.get('finished')
     puts "+++++++++ SPAWN #{num + 1}/#{diff} +++++++++++"
-    Example.make_workflow("Workflow: #{new_index} -> ")
+    Example.make_flow("Flow: #{new_index} -> ")
   end
 end
 

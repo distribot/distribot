@@ -1,7 +1,7 @@
 
 module Distribot
-  class WorkflowCanceledError < StandardError; end
-  class WorkflowPausedError < StandardError; end
+  class FlowCanceledError < StandardError; end
+  class FlowPausedError < StandardError; end
   module Worker
     def self.included(base)
       base.extend(ClassMethods)
@@ -31,12 +31,12 @@ module Distribot
 
       def enumeration_queue
         self.version ||= '0.0.0'
-        "distribot.workflow.handler.#{self}.#{self.version}.enumerate"
+        "distribot.flow.handler.#{self}.#{self.version}.enumerate"
       end
 
       def task_queue
         self.version ||= '0.0.0'
-        "distribot.workflow.handler.#{self}.#{self.version}.tasks"
+        "distribot.flow.handler.#{self}.#{self.version}.tasks"
       end
     end
 
@@ -86,9 +86,9 @@ module Distribot
 
     def handle_task_execution(task)
       context = OpenStruct.new(
-        workflow_id: task[:workflow_id],
+        flow_id: task[:flow_id],
         phase: task[:phase],
-        finished_queue: 'distribot.workflow.task.finished'
+        finished_queue: 'distribot.flow.task.finished'
       )
       trycatch do
         process_single_task(context, task)
@@ -99,10 +99,10 @@ module Distribot
       inspect_task!(context)
       # Your code is called right here:
       send(self.class.processor, context, task)
-      task_counter_key = "distribot.workflow.#{context.workflow_id}.#{context.phase}.#{self.class}.finished"
+      task_counter_key = "distribot.flow.#{context.flow_id}.#{context.phase}.#{self.class}.finished"
       Distribot.redis.decr(task_counter_key)
       publish_args = {
-        workflow_id: context.workflow_id,
+        flow_id: context.flow_id,
         phase: context.phase,
         handler: self.class.to_s
       }
@@ -112,8 +112,8 @@ module Distribot
     def enumerate_tasks(message)
       trycatch do
         context = OpenStruct.new(message)
-        workflow = Distribot::Workflow.find(context.workflow_id)
-        fail WorkflowCanceledError if workflow.canceled?
+        flow = Distribot::Flow.find(context.flow_id)
+        fail FlowCanceledError if flow.canceled?
         send(self.class.enumerator, context)
       end
     end
@@ -125,15 +125,15 @@ module Distribot
       Distribot.redis.incrby task_counter, tasks.count
       Distribot.redis.incrby "#{task_counter}.total", tasks.count
       tasks.each do |task|
-        task.merge!(workflow_id: context.workflow_id, phase: context.phase)
+        task.merge!(flow_id: context.flow_id, phase: context.phase)
         Distribot.publish! message[:task_queue], task
       end
     end
 
     def inspect_task!(context)
-      workflow = Distribot::Workflow.find(context.workflow_id)
-      fail WorkflowCanceledError if workflow.canceled?
-      fail WorkflowPausedError if workflow.paused?
+      flow = Distribot::Flow.find(context.flow_id)
+      fail FlowCanceledError if flow.canceled?
+      fail FlowPausedError if flow.paused?
     end
 
     def trycatch(&block)

@@ -4,8 +4,8 @@ Gem::Specification.new do |spec|
   spec.authors     = ['John Drago']
   spec.email       = 'jdrago.999@gmail.com'
   spec.homepage    = 'https://twitter.com/devstack'
-  spec.summary     = 'Distributed workflow engine'
-  spec.description = 'Distributed workflow engine based on redis and rabbitmq'
+  spec.summary     = 'Distributed flow engine'
+  spec.description = 'Distributed flow engine based on redis and rabbitmq'
   spec.required_rubygems_version = '>= 1.3.6'
 
   spec.files         = `git ls-files -z`.split("\x0")

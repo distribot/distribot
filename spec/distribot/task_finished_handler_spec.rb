@@ -6,7 +6,7 @@ describe Distribot::TaskFinishedHandler do
   end
   describe 'definition' do
     it 'subscribes to the correct queue' do
-      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.workflow.task.finished'
+      expect(Distribot::Handler.queue_for(described_class)).to eq 'distribot.flow.task.finished'
     end
     it 'declares a valid handler' do
       expect(Distribot::Handler.handler_for(described_class)).to eq :callback
@@ -23,7 +23,7 @@ describe Distribot::TaskFinishedHandler do
         finished_queue: 'finished-queue',
         phase: 'the-phase',
         handler: 'the-hander',
-        workflow_id: 'workflow-id'
+        flow_id: 'flow-id'
       }
     end
     context 'when the redis task counter' do
@@ -57,7 +57,7 @@ describe Distribot::TaskFinishedHandler do
             it 'publishes a message to the handler finished queue' do
               handler = Distribot::TaskFinishedHandler.new
 
-              expect(Distribot).to receive(:publish!).with("distribot.workflow.handler.finished", @message.except(:finished_queue))
+              expect(Distribot).to receive(:publish!).with("distribot.flow.handler.finished", @message.except(:finished_queue))
 
               # Finally, action:
               handler.callback(@message)

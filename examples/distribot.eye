@@ -31,8 +31,8 @@ Eye.application :distribot do
     phase-finished
     task-finished
     handler-finished
-    workflow-finished
-    workflow-created
+    flow-finished
+    flow-created
   )
 
   things.each do |thing|
