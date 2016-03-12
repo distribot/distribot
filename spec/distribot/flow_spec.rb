@@ -6,9 +6,14 @@ describe Distribot::Flow do
   end
   it 'can be initialized' do
     flow = Distribot::Flow.new(
-      phases: @json[:phases]
+      phases: @json[:phases],
+      data: {
+        foo: :bar,
+        items: [ {item1: 'Hello', item2: 'World'} ]
+      }
     )
     expect(flow.phases.count).to eq @json[:phases].count
+    expect(flow.data[:foo]).to eq :bar
   end
 
   describe '.active' do
@@ -146,6 +151,14 @@ describe Distribot::Flow do
       end
       it 'returns the correct flow' do
         expect(described_class.find('any-id')).to be_a described_class
+      end
+      context 'the data' do
+        before do
+          @flow = described_class.find('any-id')
+        end
+        it 'is intact' do
+          expect(@flow.data[:flow_info]).to eq(foo: 'bar')
+        end
       end
     end
     context 'when it cannot be found' do

@@ -5,7 +5,7 @@ module Distribot
 
   # rubocop:disable ClassLength
   class Flow
-    attr_accessor :id, :phases, :consumer, :finished_callback_queue, :created_at
+    attr_accessor :id, :phases, :consumer, :finished_callback_queue, :created_at, :data
 
     def initialize(attrs = {})
       self.id = attrs[:id]
@@ -14,6 +14,7 @@ module Distribot
       (attrs[:phases] || []).each do |options|
         add_phase(options)
       end
+      self.data = attrs[:data]
     end
 
     def self.active
@@ -191,7 +192,8 @@ module Distribot
       {
         id: id,
         created_at: created_at,
-        phases: phases.map(&:to_hash)
+        phases: phases.map(&:to_hash),
+        data: self.data
       }
     end
   end

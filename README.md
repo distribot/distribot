@@ -94,8 +94,9 @@ end
         * ~~rabbitmq~~
         * ~~elasticsearch~~
         * ~~kibana~~
-  * status dashboard
-    * show running flows
+  * ~~status dashboard~~
+    * ~~show running flows~~
+    * ~~create a new flow~~
 
 
 ## Notes
