@@ -7,6 +7,7 @@ module Distribot
     def callback(message)
       Distribot.redis.decr('distribot.flows.running')
       Distribot.redis.srem 'distribot.flows.active', message[:flow_id]
+      Distribot.broadcast! 'distribot.flow.finished', flow_id: message[:flow_id]
     end
   end
 end

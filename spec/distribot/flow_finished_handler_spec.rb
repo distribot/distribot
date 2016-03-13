@@ -24,6 +24,7 @@ describe Distribot::FlowFinishedHandler do
       expect(redis).to receive(:srem).with('distribot.flows.active', @message[:flow_id])
       expect(Distribot).to receive(:redis).exactly(2).times{ redis }
       expect(Distribot).to receive(:subscribe)
+      expect(Distribot).to receive(:broadcast!).with('distribot.flow.finished', flow_id: @message[:flow_id])
     end
     it 'decrements the running tally of how many flows are currently in process' do
       described_class.new.callback(@message)
