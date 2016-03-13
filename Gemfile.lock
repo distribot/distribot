@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    distribot (0.1.1)
+    distribot (0.1.2)
       activesupport
       bunny
       concurrent-ruby
