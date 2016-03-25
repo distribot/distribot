@@ -12,4 +12,4 @@ build:
 
 compose:
   infra:
-      image: distribot/infra:latest
+    image: distribot/infra:latest
