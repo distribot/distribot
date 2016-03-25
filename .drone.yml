@@ -1,8 +1,15 @@
-image: ubuntu:14.04
-services:
-  - distribot/infra:latest
-script:
-  - ./provision/nodes.sh
-  - gem install bundler --no-ri --no-rdoc
-  - bundle
-  - bundle exec rspec
+
+build:
+  image: ubuntu:14.04
+  commands:
+    - pwd
+    - whoami
+    - ls -la
+    - ./provision/nodes.sh
+    - gem install bundler --no-ri --no-rdoc
+    - bundle
+    - bundle exec rspec
+
+compose:
+  infra:
+      image: distribot/infra:latest
