@@ -1,0 +1,8 @@
+image: ubuntu/trusty64
+services:
+  - distribot/infra:latest
+script:
+  - ./provision/nodes.sh
+  - gem install bundler --no-ri --no-rdoc
+  - bundle
+  - bundle exec rspec
