@@ -1,5 +1,5 @@
 
-image: ubuntu:14.04
+image: bradrydzewski/ubuntu
 script:
   - pwd
   - whoami
