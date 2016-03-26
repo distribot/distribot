@@ -1,4 +1,4 @@
 
-image: bradrydzewski/ubuntu
+image: distribot/drone
 script:
   - echo "Hello World"
