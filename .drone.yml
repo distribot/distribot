@@ -1,4 +1,12 @@
 
 image: distribot/drone
 script:
-  - echo "Hello World"
+  - pwd
+  - whoami
+  - ls -la
+  - ./provision/nodes.sh
+  - sudo apt-get update
+  - sudo apt-get install -y git
+  - gem install bundler --no-ri --no-rdoc
+  - bundle
+  - bundle exec rspec
