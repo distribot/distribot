@@ -1,6 +1,6 @@
 
 image: distribot/drone
-commands:
+script:
   - ./provision/nodes.sh
   - sudo apt-get update
   - sudo apt-get install -y git
