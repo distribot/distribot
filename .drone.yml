@@ -1,12 +1,4 @@
 
 image: ubuntu:14.04
 script:
-  - pwd
-  - whoami
-  - ls -la
-  - ./provision/nodes.sh
-  - sudo apt-get update
-  - sudo apt-get install -y git
-  - gem install bundler --no-ri --no-rdoc
-  - bundle
-  - bundle exec rspec
+  - echo "Hello World"
