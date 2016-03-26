@@ -1,16 +1,17 @@
 
-image: distribot/drone
-script:
-  - ./provision/nodes.sh
-  - sudo apt-get update
-  - sudo apt-get install -y git
-  - gem install bundler --no-ri --no-rdoc
-  - bundle
-  - bundle exec rspec
-environment:
-  - INFRA_HOST=infra
-  - RABBITMQ_USERNAME=distribot
-  - RABBITMQ_PASSWORD=distribot
+build:
+  image: distribot/drone
+  commands:
+    - ./provision/nodes.sh
+    - sudo apt-get update
+    - sudo apt-get install -y git
+    - gem install bundler --no-ri --no-rdoc
+    - bundle
+    - bundle exec rspec
+  environment:
+    - INFRA_HOST=infra
+    - RABBITMQ_USERNAME=distribot
+    - RABBITMQ_PASSWORD=distribot
 
 compose:
   infra:
