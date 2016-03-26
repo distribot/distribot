@@ -12,6 +12,3 @@ build:
     - INFRA_HOST=infra
     - RABBITMQ_USERNAME=distribot
     - RABBITMQ_PASSWORD=distribot
-compose:
-  infra:
-    image: distribot/infra
