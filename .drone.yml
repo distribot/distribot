@@ -16,3 +16,6 @@ build:
 compose:
   infra:
     image: distribot/infra:latest
+    commands:
+      - ./provision/infra.sh
+      - tail -f /dev/null
