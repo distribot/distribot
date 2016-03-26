@@ -9,7 +9,7 @@ build:
     - bundle
     - bundle exec rspec
   environment:
-    - INFRA_HOST=infra
+    - INFRA_HOST=127.0.0.1
     - RABBITMQ_USERNAME=distribot
     - RABBITMQ_PASSWORD=distribot
 
