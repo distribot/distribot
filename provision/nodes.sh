@@ -70,7 +70,6 @@ done
 
 setup_fluentd
 
-cd /var/www/distribot
 bundle
 
 echo '--------------------------------------------------------------------------'
