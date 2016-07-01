@@ -1,0 +1,21 @@
+
+FROM ubuntu:15.10
+
+RUN useradd -d /home/ubuntu -m -s /bin/bash ubuntu
+ADD ./ /var/www/distribot
+RUN echo "ubuntu:changeme" | chpasswd
+RUN echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+RUN sed -i s#/home/ubuntu:/bin/false#/home/ubuntu:/bin/bash# /etc/passwd
+
+RUN \
+  apt-get update \
+  && apt-get install -yy \
+    build-essential \
+    ruby2.2 \
+    ruby2.2-dev \
+    git \
+  && gem2.2 install bundler --no-ri --no-rdoc
+
+USER ubuntu
+WORKDIR /var/www/distribot
+RUN bundle
