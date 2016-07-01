@@ -1,9 +1,9 @@
 Gem::Specification.new do |spec|
   spec.name        = 'distribot'
-  spec.version     = '0.1.2'
+  spec.version     = '0.1.3'
   spec.authors     = ['John Drago']
   spec.email       = 'jdrago.999@gmail.com'
-  spec.homepage    = 'https://github.com/jdrago999/distribot'
+  spec.homepage    = 'https://github.com/distribot/distribot'
   spec.summary     = 'Distributed flow engine'
   spec.description = 'Distributed flow engine based on redis and rabbitmq'
   spec.required_rubygems_version = '>= 1.3.6'
@@ -23,8 +23,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'webmock'
   spec.add_development_dependency 'rubocop'
 
-  spec.add_dependency 'eye'
-  spec.add_dependency 'dotenv'
   spec.add_dependency 'activesupport'
   spec.add_dependency 'bunny'
   spec.add_dependency 'redis'
