@@ -7,9 +7,6 @@ require 'pp'
 require 'active_support/core_ext/object'
 require 'active_support/core_ext/array'
 require 'active_support/json'
-require 'dotenv'
-
-Dotenv.load
 
 Distribot.configure do |config|
   config.redis_url = ENV['DISTRIBOT_REDIS_URL']
