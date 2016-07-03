@@ -5,7 +5,7 @@ require 'bunny'
 require 'byebug'
 require 'active_support/json'
 require 'uri'
-require 'wrest'
+require 'net/http'
 
 module Distribot
   class Connector
@@ -20,7 +20,7 @@ module Distribot
       uri.scheme = 'http'
       uri.port = '15672'.to_i
       uri.path = '/api/queues'
-      uri.to_s.to_uri.get.deserialize.map { |x| x['name'] }
+      JSON.parse( Net::HTTP.get_response(URI(uri.to_s)).body ).map{ |x| x['name'] }
     end
 
     def logger

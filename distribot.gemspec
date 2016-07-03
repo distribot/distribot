@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name        = 'distribot'
-  spec.version     = '0.1.3'
+  spec.version     = '0.1.9'
   spec.authors     = ['John Drago']
   spec.email       = 'jdrago.999@gmail.com'
   spec.homepage    = 'https://github.com/distribot/distribot'
@@ -26,8 +26,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'activesupport'
   spec.add_dependency 'bunny'
   spec.add_dependency 'redis'
-  spec.add_dependency 'logstash-logger'
-  spec.add_dependency 'wrest'
   spec.add_dependency 'semantic'
   spec.add_dependency 'concurrent-ruby'
+  spec.add_dependency 'logstash-logger'
 end
