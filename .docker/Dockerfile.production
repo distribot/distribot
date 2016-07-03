@@ -1,0 +1,6 @@
+
+FROM distribot:base
+ADD . /opt/distribot
+WORKDIR /opt/distribot
+USER ubuntu
+ENTRYPOINT [".docker/entrypoint.production.sh"]

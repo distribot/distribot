@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name        = 'distribot'
-  spec.version     = '0.1.9'
+  spec.version     = '0.1.10'
   spec.authors     = ['John Drago']
   spec.email       = 'jdrago.999@gmail.com'
   spec.homepage    = 'https://github.com/distribot/distribot'

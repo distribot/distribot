@@ -20,7 +20,8 @@ module Distribot
       uri.scheme = 'http'
       uri.port = '15672'.to_i
       uri.path = '/api/queues'
-      JSON.parse( Net::HTTP.get_response(URI(uri.to_s)).body ).map{ |x| x['name'] }
+      # XXX: Awful hack because Net::HTTP.get fails with 401.
+      JSON.parse( `curl #{uri.to_s}` ).map{ |x| x['name'] }
     end
 
     def logger
