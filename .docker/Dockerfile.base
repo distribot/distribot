@@ -1,0 +1,24 @@
+
+FROM ubuntu:15.10
+
+RUN \
+  apt-get update \
+  && apt-get install -y \
+    sudo \
+    curl \
+    ruby2.2 \
+    ruby2.2-dev \
+    build-essential \
+    git \
+  && gem2.2 install bundler --no-ri --no-rdoc \
+  && gem2.2 install foreman --no-ri --no-rdoc \
+  && useradd -d /home/ubuntu -m -s /bin/bash ubuntu \
+  && echo "ubuntu:changeme" | chpasswd \
+  && echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
+  && sed -i s#/home/ubuntu:/bin/false#/home/ubuntu:/bin/bash# /etc/passwd
+
+COPY Gemfile /tmp/Gemfile
+COPY Gemfile.lock /tmp/Gemfile.lock
+COPY distribot.gemspec /tmp/distribot.gemspec
+USER ubuntu
+RUN cd /tmp/ && sudo chown ubuntu:ubuntu Gemfile.lock && bundle
