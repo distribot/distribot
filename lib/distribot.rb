@@ -101,7 +101,7 @@ module Distribot
     end
 
     def logger
-      @logger ||= LogStashLogger.new(type: :syslog, formatter: :json)
+      @logger ||= LogStashLogger.new(type: :stderr)
       @logger
     end
   end

@@ -49,7 +49,6 @@ describe Distribot::Connector do
         distribot.flow.task.finished
       )
       @queues_json = @queues.to_a.map{|name| {name: name} }.to_json
-      Wrest.logger = Logger.new('/dev/null')
       stub_request(:get, "http://localhost:15672/api/queues").
         with(:headers => {'Accept'=>'*/*', 'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3', 'User-Agent'=>'Ruby'}).
         to_return(:status => 200, :body => @queues_json, :headers => {'Content-Type' => 'application/json'})
