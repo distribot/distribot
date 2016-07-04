@@ -5,5 +5,7 @@ RUN \
   gem install distribot --no-ri --no-rdoc \
   && gem install foreman --no-ri --no-rdoc
 
-ADD Procfile /Procfile
-ENTRYPOINT ["foreman", "start"]
+COPY Procfile /Procfile
+COPY .docker/entrypoint.thin.sh /entrypoint.sh
+WORKDIR /
+ENTRYPOINT ["/entrypoint.sh"]
