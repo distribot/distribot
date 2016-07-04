@@ -17,7 +17,7 @@ Stream processing engine for Ruby.
 ### In your Gemfile
 
 ```ruby
-gem 'distribot', git: 'git@github.com:distribot/distribot.git'
+gem 'distribot'
 ```
 
 ## Usage
