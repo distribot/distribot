@@ -86,7 +86,7 @@ end
       * ~~should not require infrastructure to run tests~~
       * ~~enough infrastructure to run the code~~
     * small running environment which uses the gem
-      * engine
+      * ~~engine~~ (Dockerfile.thin)
       * worker
       * controller
       * ~~infra~~
