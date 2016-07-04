@@ -1,0 +1,11 @@
+
+FROM ruby:2.2-alpine
+
+RUN \
+  gem install distribot --no-ri --no-rdoc \
+  && gem install foreman --no-ri --no-rdoc
+
+COPY Procfile /Procfile
+COPY .docker/entrypoint.thin.sh /entrypoint.sh
+WORKDIR /
+ENTRYPOINT ["/entrypoint.sh"]

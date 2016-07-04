@@ -1,21 +1,23 @@
 
 FROM ubuntu:15.10
 
-RUN useradd -d /home/ubuntu -m -s /bin/bash ubuntu
-ADD ./ /var/www/distribot
-RUN echo "ubuntu:changeme" | chpasswd
-RUN echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-RUN sed -i s#/home/ubuntu:/bin/false#/home/ubuntu:/bin/bash# /etc/passwd
-
 RUN \
   apt-get update \
-  && apt-get install -yy \
-    build-essential \
+  && apt-get install -y \
+    sudo \
+    curl \
     ruby2.2 \
     ruby2.2-dev \
+    build-essential \
     git \
-  && gem2.2 install bundler --no-ri --no-rdoc
+  && gem2.2 install bundler --no-ri --no-rdoc \
+  && gem2.2 install foreman --no-ri --no-rdoc \
+  && useradd -d /home/ubuntu -m -s /bin/bash ubuntu \
+  && echo "ubuntu:changeme" | chpasswd \
+  && echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
+  && sed -i s#/home/ubuntu:/bin/false#/home/ubuntu:/bin/bash# /etc/passwd
 
 USER ubuntu
 WORKDIR /var/www/distribot
-RUN bundle
+
+ENTRYPOINT ["bundle"]
