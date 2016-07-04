@@ -2,7 +2,6 @@
 require 'pp'
 require 'securerandom'
 require 'bunny'
-require 'byebug'
 require 'active_support/json'
 require 'uri'
 require 'net/http'

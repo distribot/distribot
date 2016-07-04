@@ -1,0 +1,9 @@
+
+FROM ruby:2.2-alpine
+
+RUN \
+  gem install distribot --no-ri --no-rdoc \
+  && gem install foreman --no-ri --no-rdoc
+
+ADD Procfile /Procfile
+ENTRYPOINT ["foreman", "start"]
