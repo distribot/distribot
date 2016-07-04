@@ -17,7 +17,7 @@ Work scheduling and distribution engine.
 ### In your Gemfile
 
 ```ruby
-gem 'distribot', git: 'git@github.com:jdrago999/distribot.git'
+gem 'distribot'
 ```
 
 ## Usage
