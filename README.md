@@ -4,7 +4,7 @@
 [![Code Climate](https://codeclimate.com/github/jdrago999/distribot/badges/gpa.svg)](https://codeclimate.com/github/jdrago999/distribot)
 [![Test Coverage](https://codeclimate.com/github/jdrago999/distribot/badges/coverage.svg)](https://codeclimate.com/github/jdrago999/distribot/coverage)
 
-Work scheduling and distribution engine.
+Stream processing engine for Ruby.
 
 ## Features
 
@@ -29,6 +29,23 @@ Distribot.configure do |config|
   config.redis_url = ENV['DISTRIBOT_REDIS_URL']
   config.rabbitmq_url = ENV['DISTRIBOT_RABBITMQ_URL']
 end
+
+module Foo
+  class Producer
+    include Distribot::Producer
+
+    def produce(context)
+    end
+  end
+
+  class Consumer
+    include Distribot::Consumer
+
+    def consume(context, job)
+    end
+  end
+end
+
 ```
 
 ```json

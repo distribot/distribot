@@ -1,11 +1,11 @@
 Gem::Specification.new do |spec|
   spec.name        = 'distribot'
-  spec.version     = '0.1.12'
+  spec.version     = '0.2.0'
   spec.authors     = ['John Drago']
   spec.email       = 'jdrago.999@gmail.com'
   spec.homepage    = 'https://github.com/distribot/distribot'
-  spec.summary     = 'Distributed flow engine'
-  spec.description = 'Distributed flow engine based on redis and rabbitmq'
+  spec.summary     = 'Stream processing engine for Ruby'
+  spec.description = 'Stream processing engine for Ruby'
   spec.required_rubygems_version = '>= 1.3.6'
 
   spec.files         = `git ls-files -z`.split("\x0")
