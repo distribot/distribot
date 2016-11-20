@@ -7,5 +7,14 @@ while ! curl -s "http://$RABBITMQ_USERNAME:$RABBITMQ_PASWORD@$RABBITMQ_HOSTNAME:
   sleep 1
 done
 
-echo "RABBITMQ IS UP...starting"
+auto_start=${AUTO_START:-false}
+delay=${AUTO_START_DELAY:-0}
+if [ "$auto_start" == "true" ]; then
+  echo "RABBITMQ IS UP...starting"
+  sleep $delay
+  foreman start
+else
+  tail -f /dev/null
+fi
+
 foreman start
