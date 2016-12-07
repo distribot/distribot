@@ -1,8 +1,11 @@
 
+# build with docker build -t distribot/alpine:0.3.0 -f .docker/Dockerfile.thin .
+
 FROM ruby:2.2-alpine
 
 RUN \
-  gem install distribot --no-ri --no-rdoc \
+  apk --no-cache add curl \
+  && gem install distribot --no-ri --no-rdoc \
   && gem install foreman --no-ri --no-rdoc
 
 COPY Procfile /Procfile
